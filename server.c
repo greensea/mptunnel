@@ -26,6 +26,7 @@ static struct ev_loop * g_ev_reactor = NULL;
 static struct list_head g_buffers = LIST_HEAD_INIT(g_buffers);
 
 static struct list_head g_bridge_list = LIST_HEAD_INIT(g_bridge_list);
+static pthread_mutex_t g_bridge_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int g_listen_fd = -1;
 static int g_target_fd = -1;
@@ -66,7 +67,24 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     else {
         LOGD("从客户端(:%u)收取了 %d 字节数据：%s\n", htons(baddr->sin_port), readb, (char*)buf + sizeof(packet_t));
         
-        list_add(&b->list, &g_bridge_list);
+        int exists = 0;
+        bridge_t *lb;
+        struct list_head *l;
+        pthread_mutex_lock(&g_bridge_list_mutex);
+        
+        list_for_each(l, &g_bridge_list) {
+            lb = list_entry(l, bridge_t, list);
+            if (memcmp(&lb->addr, &b->addr, sizeof(struct sockaddr)) == 0) {
+                exists = 1;
+                break;
+            }
+        }
+        
+        if (exists == 0) {
+            list_add(&b->list, &g_bridge_list);
+        }
+        
+        pthread_mutex_unlock(&g_bridge_list_mutex);
     }
     
     int sendb;
@@ -119,15 +137,22 @@ int send_to_servers(char* buf, int buflen) {
     socklen_t addrlen;
     int sendb;
     char ipstr[128] = {0};
+    static int id = 0;
+    
+    packet_t* p;
+    p = (packet_t*)malloc(sizeof(*p) + buflen);
+    p->type = PKT_TYPE_DATA;
+    p->id = ++id;
+    memcpy(((char*)p) + sizeof(*p), buf, buflen);
     
     
     bridge_t *b;
-    struct list_head *p;
+    struct list_head *l;
     
-    list_for_each(p, &g_bridge_list) {
-        b = list_entry(p, bridge_t, list);
+    list_for_each(l, &g_bridge_list) {
+        b = list_entry(l, bridge_t, list);
     
-        sendb = sendto(g_listen_fd, buf, buflen, 0, &b->addr, b->addrlen);
+        sendb = sendto(g_listen_fd, p, buflen + sizeof(*p), 0, &b->addr, b->addrlen);
         if (sendb < 0) {
             LOGW("无法向桥(%s:%d)发送 %d 字节数据数据`%s', %s\n", ipstr, ntohs(baddr->sin_port), buflen, buf, strerror(errno));
         }
@@ -138,6 +163,8 @@ int send_to_servers(char* buf, int buflen) {
             LOGD("向桥发送了 %d 字节数据: %s\n", buflen, buf);
         }
     }
+    
+    free(p);
     
     return 0;
 }
