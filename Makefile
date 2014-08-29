@@ -2,13 +2,13 @@ CC = gcc
 CFLAGS = -g -Wall -I/usr/include/libev 
 LDFLAGS = -g  -lev -lpthread
 
-all: client
+all: client server
 
 
-client: client.c net.c
+client: client.o net.o mptunnel.o rbtree.o
 	$(CC) $(LDFLAGS) $^  -o client
 
-server: server.c
+server: server.c mptunnel.o net.o
 	$(CC) $(LDFLAGS) $^  -o server
 
 

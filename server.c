@@ -1,0 +1,245 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <ev.h>
+#include "net.h"
+
+#include "linklist.h"
+#include "rbtree.h"
+
+#include "server.h"
+#include "mptunnel.h"
+#include "buffer.h"
+#include "client.h"
+
+static struct ev_loop * g_ev_reactor = NULL;
+
+static struct list_head g_buffers = LIST_HEAD_INIT(g_buffers);
+
+static struct list_head g_bridge_list = LIST_HEAD_INIT(g_bridge_list);
+
+static int g_listen_fd = -1;
+static int g_target_fd = -1;
+
+
+
+
+/**
+ * 收到远程桥发来的数据时的处理函数
+ */
+void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
+    char* buf;
+    int buflen = 65536;
+    int readb;
+    struct sockaddr_in *baddr;
+    
+    buf = malloc(buflen);
+    memset(buf, 0x00, buflen);
+    
+    bridge_t* b = (bridge_t*)malloc(sizeof(bridge_t));
+    memset(b, 0x00, sizeof(*b));
+    b->addrlen = sizeof(b->addr);
+    baddr = (struct sockaddr_in*)&b->addr;
+    
+    LOGD("收到从 %d 发来的数据\n", w->fd);
+    
+    readb = recvfrom(w->fd, buf, buflen, 0, &b->addr, &b->addrlen);
+    if (readb < 0) {
+        LOGW("客户端可能断开了连接：%s\n", strerror(errno));
+        free(buf); free(b);
+        return;
+    }
+    else if (readb == 0) {
+        LOGW("无法从客户端接收数据，客户端可能已经断开了连接\n");
+        free(buf); free(b);
+        return;
+    }
+    else {
+        LOGD("从客户端(:%u)收取了 %d 字节数据：%s\n", htons(baddr->sin_port), readb, (char*)buf + sizeof(packet_t));
+        
+        list_add(&b->list, &g_bridge_list);
+    }
+    
+    int sendb;
+    sendb = send(g_target_fd, buf, readb, MSG_DONTWAIT);
+    if (sendb < 0) {
+        LOGW("无法向目标服务器发送数据：%s\n", strerror(errno));
+    }
+    else if (sendb == 0) {
+        LOGW("目标服务器可能已经断开了连接\n");
+    }
+    else {
+        LOGD("向目标服务器发送了 %d 字节数据：%s\n", readb, buf);
+    }
+    
+    free(buf);
+    return;
+}
+
+
+/**
+ * ev 处理线程
+ */
+void* ev_thread(void* ptr) {
+    LOGD("开始 EV 处理线程\n");
+    
+    g_listen_fd = net_bind("0.0.0.0", 3001, SOCK_DGRAM);
+    if (g_listen_fd < 0) {
+        LOGE("无法开始监听桥的请求: %s\n", strerror(errno));
+        exit(0);
+    }
+    
+    g_ev_reactor = ev_loop_new(EVFLAG_AUTO);
+     
+    ev_io* w = (ev_io*)malloc(sizeof(ev_io));
+    ev_io_init(w, recv_bridge_callback, g_listen_fd, EV_READ);
+    ev_io_start(g_ev_reactor, w);
+     
+    ev_run(g_ev_reactor, 0);
+        
+    LOGW("EV 处理线程退出\n");
+}
+
+
+/**
+ * 向桥们发送数据
+ */
+int send_to_servers(char* buf, int buflen) {
+    struct sockaddr* addr;
+    struct sockaddr_in *baddr;
+    socklen_t addrlen;
+    int sendb;
+    char ipstr[128] = {0};
+    
+    
+    bridge_t *b;
+    struct list_head *p;
+    
+    list_for_each(p, &g_bridge_list) {
+        b = list_entry(p, bridge_t, list);
+    
+        sendb = sendto(g_listen_fd, buf, buflen, 0, &b->addr, b->addrlen);
+        if (sendb < 0) {
+            LOGW("无法向桥(%s:%d)发送 %d 字节数据数据`%s', %s\n", ipstr, ntohs(baddr->sin_port), buflen, buf, strerror(errno));
+        }
+        else if (sendb == 0) {
+            LOGW("无法向桥发送数据，桥可能已经断开\n");
+        }
+        else {
+            LOGD("向桥发送了 %d 字节数据: %s\n", buflen, buf);
+        }
+    }
+    
+    return 0;
+}
+
+
+
+
+/**
+ * 用于转发服务器消息到客户端的线程
+ */
+void* server_thread(void* ptr) {
+    int readb, sendb, buflen;
+    char* buf;
+    
+    LOGD("转发服务器消息到桥的线程启动了\n");
+    
+    
+    buflen = 65536;
+    buf = malloc(buflen);
+    
+    g_target_fd = net_connect("nagisa.greensea.org", 3000, SOCK_DGRAM);
+    if (g_target_fd < 0) {
+        LOGE("无法创建到目标服务器的连接：%s\n", strerror(errno));
+        return NULL;
+    }
+    
+    while (1) {
+        memset(buf, 0x00, sizeof(buflen));
+        readb = recv(g_target_fd, buf, buflen, 0);
+        if (readb < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                continue;
+            }
+            else {
+                LOGI("目标服务器断开了连接: %s\n", strerror(errno));
+                g_target_fd = net_connect("nagisa.greensea.org", 3000, SOCK_DGRAM);
+                continue;
+            }
+        }
+        else if (readb == 0) {
+            LOGW("无法从目标服务器收取消息，服务器断开了连接\n");
+            g_target_fd = net_connect("nagisa.greensea.org", 3000, SOCK_DGRAM);
+            continue;
+        }
+        else {
+            /// 收到了数据，将数据转发给桥
+            send_to_servers(buf, readb);
+        }
+    }
+    
+    free(buf);
+    
+    LOGD("转发服务器消息到桥的线程退出了\n");
+    
+    return NULL;
+}
+
+
+
+
+int main(int argc, char** argv) {
+    int clientfd, listenfd;
+    
+    LOGD("初始化 EV 处理线程\n");
+    pthread_t tid;
+    pthread_create(&tid, NULL, ev_thread, NULL);
+    pthread_detach(tid);
+    
+
+
+    /// 创建转发数据到目标服务器的线程
+    int* ptr = malloc(sizeof(int));
+    *ptr = clientfd;
+    pthread_create(&tid, NULL, server_thread, NULL);
+    pthread_detach(tid);
+    
+    while (1) {
+        sleep(100);
+    }
+
+    
+    return 0;
+}
+
+
+
+
+/**
+ * 初始化一个接收器 ev，用来处理收到的数据
+ */
+int init_recv_ev(int fd) {
+    ev_io *watcher = (ev_io*)malloc(sizeof(ev_io));
+    memset(watcher, 0x00, sizeof(*watcher));
+    
+    ev_io_init(watcher, recv_bridge_callback, fd, EV_READ);
+    ev_io_start(g_ev_reactor, watcher);
+    
+    return 0;
+}
+
+
+
+
+
+

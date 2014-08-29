@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <netdb.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -31,8 +32,7 @@ int net_bind(const char* bind_ip, int port, int type) {
     }
 
     n = 1;
-    setsockopt( fd, SOL_SOCKET, SO_REUSEADDR,
-                (const char *) &n, sizeof( n ) );
+    setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, (const char *) &n, sizeof( n ) );
 
     server_addr.sin_addr.s_addr = htonl( INADDR_ANY );
     server_addr.sin_family      = AF_INET;
@@ -79,10 +79,9 @@ int net_accept(int bind_fd, void* client_ip) {
     int client_fd;
     
     struct sockaddr_in client_addr;
-    int n = (int) sizeof( client_addr );
+    socklen_t n;
 
-    client_fd = (int) accept( bind_fd, (struct sockaddr *)
-                               &client_addr, &n );
+    client_fd = accept(bind_fd, (struct sockaddr *) &client_addr, &n);
 
     if( client_fd < 0 )
     {

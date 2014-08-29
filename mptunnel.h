@@ -36,4 +36,23 @@
 } while(0);
 
 
+enum packet_type {
+    PKT_TYPE_CTL,
+    PKT_TYPE_DATA
+};
+
+typedef struct packet_t {
+    enum packet_type type;
+    int id;
+    int buflen;     /** 数据长度（不包括 packet_t 自身） */
+} packet_t;
+
+
+packet_t* packet_make(enum packet_type type, const char* buf, int buflen);
+int packet_free(packet_t* p);
+int packet_send(int fd, char* buf, int buflen);
+    
+int packet_received(int id);
+int packet_is_received(int _id);
+
 #endif
