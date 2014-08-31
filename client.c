@@ -225,13 +225,8 @@ void* client_thread(void* ptr) {
     
     while (1) {
         memset(buf, 0x00, sizeof(buflen));
-        if (g_client_addrlen == 0) {
-            g_client_addrlen = sizeof(g_client_addr);
-            readb = recvfrom(g_listen_fd, buf, buflen, 0, &g_client_addr, &g_client_addrlen);
-        }
-        else {
-            readb = recv(g_listen_fd, buf, buflen, 0);
-        }
+        g_client_addrlen = sizeof(g_client_addr);
+        readb = recvfrom(g_listen_fd, buf, buflen, 0, &g_client_addr, &g_client_addrlen);
         
         LOGD("收到客户端(:%u)发来的数据(fd=%d): %s\n", ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), g_listen_fd, buf);
         if (readb < 0) {
