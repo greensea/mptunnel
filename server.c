@@ -87,8 +87,37 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         pthread_mutex_unlock(&g_bridge_list_mutex);
     }
     
+    
+    /// 解包，然后发送给目标服务器
+    packet_t* p;
+    p = (packet_t*)buf;
+    if (p->type == PKT_TYPE_CTL) {
+        LOGD("这是一个控制包，忽略\n");
+        free(buf);
+        return;
+    }
+    else if (p->type != PKT_TYPE_DATA) {
+        LOGD("这不是一个未知类型的包，丢弃\n");
+        free(buf);
+        return;
+    }
+    
+    buflen = p->buflen;
+    buf = (char*)buf + sizeof(*p);
+    
+    if (packet_is_received(p->id) == 1) {
+        LOGD("编号为 %d 包已经发送过了，丢弃\n", p->id);
+        free(p);
+        return;
+    }
+    else {
+        LOGD("向目标服务器转发编号为 %d 的包\n", p->id);
+        packet_received(p->id);
+    }
+    
+    /// 发送给目标服务器
     int sendb;
-    sendb = send(g_target_fd, buf, readb, MSG_DONTWAIT);
+    sendb = send(g_target_fd, buf, buflen, MSG_DONTWAIT);
     if (sendb < 0) {
         LOGW("无法向目标服务器发送数据：%s\n", strerror(errno));
     }
@@ -96,10 +125,10 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         LOGW("目标服务器可能已经断开了连接\n");
     }
     else {
-        LOGD("向目标服务器发送了 %d 字节数据：%s\n", readb, buf);
+        LOGD("向目标服务器发送了 %d 字节数据：%s\n", buflen, buf);
     }
     
-    free(buf);
+    free(p);
     return;
 }
 
@@ -110,7 +139,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
 void* ev_thread(void* ptr) {
     LOGD("开始 EV 处理线程\n");
     
-    g_listen_fd = net_bind("0.0.0.0", 3001, SOCK_DGRAM);
+    g_listen_fd = net_bind("0.0.0.0", 3002, SOCK_DGRAM);
     if (g_listen_fd < 0) {
         LOGE("无法开始监听桥的请求: %s\n", strerror(errno));
         exit(0);
@@ -143,6 +172,7 @@ int send_to_servers(char* buf, int buflen) {
     p = (packet_t*)malloc(sizeof(*p) + buflen);
     p->type = PKT_TYPE_DATA;
     p->id = ++id;
+    p->buflen = buflen;
     memcpy(((char*)p) + sizeof(*p), buf, buflen);
     
     
@@ -160,7 +190,7 @@ int send_to_servers(char* buf, int buflen) {
             LOGW("无法向桥发送数据，桥可能已经断开\n");
         }
         else {
-            LOGD("向桥发送了 %d 字节数据: %s\n", buflen, buf);
+            LOGD("向桥发送了 %d 字节数据: %s\n", buflen + sizeof(*p), buf);
         }
     }
     
@@ -185,7 +215,7 @@ void* server_thread(void* ptr) {
     buflen = 65536;
     buf = malloc(buflen);
     
-    g_target_fd = net_connect("nagisa.greensea.org", 3000, SOCK_DGRAM);
+    g_target_fd = net_connect("nagisa.greensea.org", 4002, SOCK_DGRAM);
     if (g_target_fd < 0) {
         LOGE("无法创建到目标服务器的连接：%s\n", strerror(errno));
         return NULL;

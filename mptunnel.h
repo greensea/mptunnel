@@ -48,9 +48,9 @@ typedef struct packet_t {
 } packet_t;
 
 
-packet_t* packet_make(enum packet_type type, const char* buf, int buflen);
+packet_t* packet_make(enum packet_type type, const char* buf, int buflen, int);
 int packet_free(packet_t* p);
-int packet_send(int fd, char* buf, int buflen);
+int packet_send(int fd, char* buf, int buflen, int);
     
 int packet_received(int id);
 int packet_is_received(int _id);
