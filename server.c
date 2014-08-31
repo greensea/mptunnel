@@ -21,6 +21,9 @@
 #include "buffer.h"
 #include "client.h"
 
+#define TARGET_HOST "192.168.2.201"
+#define TARGET_PORT 4002
+
 static struct ev_loop * g_ev_reactor = NULL;
 
 static struct list_head g_buffers = LIST_HEAD_INIT(g_buffers);
@@ -215,7 +218,7 @@ void* server_thread(void* ptr) {
     buflen = 65536;
     buf = malloc(buflen);
     
-    g_target_fd = net_connect("nagisa.greensea.org", 4002, SOCK_DGRAM);
+    g_target_fd = net_connect(TARGET_HOST, TARGET_PORT, SOCK_DGRAM);
     if (g_target_fd < 0) {
         LOGE("无法创建到目标服务器的连接：%s\n", strerror(errno));
         return NULL;
@@ -230,13 +233,13 @@ void* server_thread(void* ptr) {
             }
             else {
                 LOGI("目标服务器断开了连接: %s\n", strerror(errno));
-                g_target_fd = net_connect("nagisa.greensea.org", 3000, SOCK_DGRAM);
+                g_target_fd = net_connect(TARGET_HOST, TARGET_PORT, SOCK_DGRAM);
                 continue;
             }
         }
         else if (readb == 0) {
             LOGW("无法从目标服务器收取消息，服务器断开了连接\n");
-            g_target_fd = net_connect("nagisa.greensea.org", 3000, SOCK_DGRAM);
+            g_target_fd = net_connect(TARGET_HOST, TARGET_PORT, SOCK_DGRAM);
             continue;
         }
         else {
