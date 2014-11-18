@@ -117,6 +117,10 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     if (received_is_received(received, p->id) == 1) {
         LOGD("编号为 %d 包已经发送过了，丢弃\n", p->id);
         free(p);
+        
+        received_destroy(received);
+        free(received);
+        
         return;
     }
     else {

@@ -76,4 +76,5 @@ int received_is_received(received_t* r, int id);
 int received_try_dropdead(received_t* r, int ttl);
 int received_init(received_t* r);
 int received_add(received_t* r, int id);
+int received_destroy(received_t* r);
 #endif
