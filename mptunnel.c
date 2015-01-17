@@ -50,7 +50,8 @@ int packet_send(int fd, char* buf, int buflen, int id) {
         LOGW("fd=%d 可能断开了连接\n", fd);
     }
     else {
-        LOGD("向 %d 发送了 %d 字节消息“%s”\n", fd, sendb, (char*)(p + 1));
+        //LOGD("向 %d 发送了 %d 字节消息“%s”\n", fd, sendb, (char*)(p + 1));
+        LOGD("向 %d 发送了 %d 字节消息\n", fd, sendb);
     }
     
     packet_free(p);

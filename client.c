@@ -188,8 +188,9 @@ int connect_to_server(struct list_head *list, char* host, int port) {
 
 int connect_to_servers(struct list_head *list) {
     int i;
-    char* hosts[] = {"nagisa.greensea.org", "kotomi.greensea.org", "azuna.greensea.org"};
-    int ports[] = {3001, 3001, 3001};
+    //char* hosts[] = {"50.115.173.92", "azuna.greensea.org"};
+    char* hosts[] = {"kotomi.greensea.org", "azuna.greensea.org", "vpn.huafeiduo.com"};
+    int ports[] = { 3001, 3001, 3001};
     //char* hosts[] = {"192.168.2.201", "192.168.2.201"};
     //int ports[] = {3001, 3001};
     
@@ -228,7 +229,8 @@ void* client_thread(void* ptr) {
         g_client_addrlen = sizeof(g_client_addr);
         readb = recvfrom(g_listen_fd, buf, buflen, 0, &g_client_addr, &g_client_addrlen);
         
-        LOGD("收到客户端(:%u)发来的数据(fd=%d): %s\n", ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), g_listen_fd, buf);
+        //LOGD("收到客户端(:%u)发来的数据(fd=%d): %s\n", ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), g_listen_fd, buf);
+        LOGD("收到客户端(:%u)发来的数据(fd=%d)\n", ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), g_listen_fd);
         if (readb < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 continue;
@@ -264,7 +266,8 @@ void* client_thread(void* ptr) {
                     LOGW("%s:%d 可能断开了连接\n", c->host, c->port);
                 }
                 else {
-                    LOGD("向 %s:%d 发送了 %d 字节消息“%s”\n", c->host, c->port, sendb, buf);
+                    //LOGD("向 %s:%d 发送了 %d 字节消息“%s”\n", c->host, c->port, sendb, buf);
+                    LOGD("向 %s:%d 发送了 %d 字节消息\n", c->host, c->port, sendb);
                 }
             }
         }
