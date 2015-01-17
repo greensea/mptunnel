@@ -44,6 +44,12 @@ void* ev_thread(void* ptr) {
 
 
 int main(int argc, char** argv) {
+    if (argc <= 1) {
+        fprintf(stderr, "Usage: <%s> <config_file>\n", argv[0]);
+        exit(-1);
+    }
+    
+    
     g_listen_fd = net_bind("0.0.0.0", 3000, SOCK_DGRAM);
     if (g_listen_fd < 0) {
         LOGE("无法开始监听：%s\n", strerror(errno));
@@ -52,7 +58,7 @@ int main(int argc, char** argv) {
     LOGD("成功开始监听\n");
     
     pthread_t tid;
-    pthread_create(&tid, NULL, client_thread, NULL);
+    pthread_create(&tid, NULL, client_thread, strdup(argv[1]));
     pthread_detach(tid);
     
     while (1) {
@@ -195,17 +201,40 @@ int connect_to_server(struct list_head *list, char* host, int port) {
 }
 
 
-int connect_to_servers(struct list_head *list) {
+int connect_to_servers(struct list_head *list, char* server_list_path) {
     int i;
-    //char* hosts[] = {"50.115.173.92", "azuna.greensea.org"};
-    char* hosts[] = {"kotomi.greensea.org", "azuna.greensea.org", "vpn.huafeiduo.com"};
-    int ports[] = { 3001, 3001, 3001};
-    //char* hosts[] = {"192.168.2.201", "192.168.2.201"};
-    //int ports[] = {3001, 3001};
+    char host[1024];
+    char line[1024];
+    int port;
+    FILE* fp;
     
-    for (i = 0; i < sizeof(ports) / sizeof(ports[0]); i++) {
-        connect_to_server(list, hosts[i], ports[i]);
+    fp = fopen(server_list_path, "r");
+    if (fp == NULL) {
+        LOGE("无法读取配置文件`%s‘：%s\n", server_list_path, strerror(errno));
+        exit(-1);
     }
+    
+    while (!feof(fp)) {
+        memset(host, 0x00, sizeof(host));
+        memset(line, 0x00, sizeof(line));
+        port = 0;
+        
+        fgets(line, sizeof(line) - 1, fp);
+        
+        if (line[0] == 0x00 || line[0] == '\n' || line[0] == '\r') {
+            continue;
+        }
+        if (line[0] == '#') {
+            continue;
+        }
+        
+        sscanf(line, "%s %d\n", host, &port);
+        
+        LOGI("从配置文件中读取到目标服务器：%s:%d\n", host, port);
+        connect_to_server(list, host, port);
+    }
+    
+    fclose(fp);
     
     return 0;
 }
@@ -213,19 +242,24 @@ int connect_to_servers(struct list_head *list) {
 
 /**
  * 将本地数据转发到桥的线程
+ * 
+ * @param void*     目标服务器配置文件路径
  */
 void* client_thread(void* ptr) {
     int readb, sendb, buflen;
     char* buf;
+    char server_list_path[1024] = {0};
+    
+    strncpy(server_list_path, (char*)ptr, sizeof(server_list_path) - 1);
+    free(ptr);
     
     buflen = 65536;
-        
     buf = malloc(buflen);
     
     
     /// 连接到服务器
     struct list_head connections = LIST_HEAD_INIT(connections);
-    connect_to_servers(&connections);
+    connect_to_servers(&connections, server_list_path);
     
     LOGD("初始化 EV 处理线程\n");
     pthread_t tid;
