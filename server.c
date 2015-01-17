@@ -86,17 +86,18 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
             lb = list_entry(l, bridge_t, list);
             if (memcmp(&lb->addr, &b->addr, sizeof(struct sockaddr)) == 0) {
                 exists = 1;
+                
+                free(b);
+                b = lb;
+                
                 break;
             }
         }
         
-        if (exists == 0) {
+        if (exists != 1) {
             list_add(&b->list, &g_bridge_list);
         }
-        else {
-            free(b);
-        }
-        
+
         pthread_mutex_unlock(&g_bridge_list_mutex);
     }
     
