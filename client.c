@@ -130,7 +130,7 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     }
     else {
         received_add(received, c->id);
-        LOGD("从远程桥（%d）收到 %d 字节的数据包，包编号 %d，载荷长度 %d\n", w->fd, c->buflen, c->id, c->buflen);
+        LOGD("从远程桥（%d）收到 %d 字节的数据包，包编号 %d，原始包长度 %d, 载荷长度 %d\n", w->fd, c->buflen, c->id, readb, c->buflen);
     }
     
     received_try_dropdead(received, 30);

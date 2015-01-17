@@ -10,6 +10,10 @@
 #include "linklist.h"
 
 
+/// 转发时最大的包长度
+#define MAX_PACKET_SIZE 8000
+
+
 #define LOG_ERROR 1
 #define LOG_WARNING 2
 #define LOG_NOTICE 3

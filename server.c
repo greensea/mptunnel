@@ -196,7 +196,16 @@ int send_to_servers(char* buf, int buflen) {
     char ipstr[128] = {0};
     static int id = 0;
     
-
+    if (buflen > MAX_PACKET_SIZE) {
+        int ret = 0;
+        int split = buflen / 2;
+        
+        LOGI("要发送的数据大小为 %d 字节，超过最大包大小，将该包拆分为两个小包后再尝试发送\n", buflen, MAX_PACKET_SIZE);
+        
+        ret += send_to_servers(buf, split);
+        ret += send_to_servers(buf + split, buflen - split);
+        return ret;
+    }
     
     
     packet_t* p;
@@ -215,13 +224,13 @@ int send_to_servers(char* buf, int buflen) {
     
         sendb = sendto(g_listen_fd, p, buflen + sizeof(*p), 0, &b->addr, b->addrlen);
         if (sendb < 0) {
-            LOGW("无法向桥(%s:%d)发送 %d 字节数据数据`%s', %s\n", ipstr, ntohs(baddr->sin_port), buflen, buf, strerror(errno));
+            LOGW("无法向桥(%s:%d)发送 %d 字节数据，包编号 %d: %s\n", ipstr, ntohs(baddr->sin_port), buflen, p->id, strerror(errno));
         }
         else if (sendb == 0) {
             LOGW("无法向桥发送数据，桥可能已经断开\n");
         }
         else {
-            LOGD("向桥发送了 %d 字节数据: %s\n", sendb, buf);
+            LOGD("向桥发送了 %d 字节数据，包编号 %d\n", sendb, p->id);
         }
     }
     
