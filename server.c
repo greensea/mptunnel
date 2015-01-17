@@ -61,21 +61,21 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     b->addrlen = sizeof(b->addr);
     baddr = (struct sockaddr_in*)&b->addr;
     
-    LOGD("收到从 %d 发来的数据\n", w->fd);
+    LOGD("收到从桥端（fd=%d）发来的数据\n", w->fd);
     
     readb = recvfrom(w->fd, buf, buflen, 0, &b->addr, &b->addrlen);
     if (readb < 0) {
-        LOGW("客户端可能断开了连接：%s\n", strerror(errno));
+        LOGW("桥端（fd=%d)可能断开了连接：%s\n", w->fd, strerror(errno));
         free(buf); free(b);
         return;
     }
     else if (readb == 0) {
-        LOGW("无法从客户端接收数据，客户端可能已经断开了连接\n");
+        LOGW("无法从桥端（fd=%d）接收数据，桥端可能已经断开了连接\n", w->fd);
         free(buf); free(b);
         return;
     }
     else {
-        LOGD("从客户端(:%u)收取了 %d 字节数据：%s\n", htons(baddr->sin_port), readb, (char*)buf + sizeof(packet_t));
+        //LOGD("从桥端(:%u)收取了 %d 字节数据：%s\n", htons(baddr->sin_port), readb, (char*)buf + sizeof(packet_t));
         
         int exists = 0;
         bridge_t *lb;
@@ -93,9 +93,9 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         if (exists == 0) {
             list_add(&b->list, &g_bridge_list);
         }
-	else {
+        else {
             free(b);
-	}
+        }
         
         pthread_mutex_unlock(&g_bridge_list_mutex);
     }
@@ -105,21 +105,24 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     packet_t* p;
     p = (packet_t*)buf;
     if (p->type == PKT_TYPE_CTL) {
-        LOGD("这是一个控制包，忽略\n");
+        LOGD("从桥端(:%u)收取了 %d 字节数据编号为 %d 的数据包，但这是一个控制包，丢弃之\n", htons(baddr->sin_port), readb, p->id);
         free(buf);
         return;
     }
     else if (p->type != PKT_TYPE_DATA) {
-        LOGD("这不是一个未知类型的包，丢弃\n");
+        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，但这是一个未知类型的数据包，丢弃之\n", htons(baddr->sin_port), readb, p->id);
         free(buf);
         return;
+    }
+    else {
+        //LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包\n", htons(baddr->sin_port), readb, p->id);
     }
     
     buflen = p->buflen;
     buf = (char*)buf + sizeof(*p);
     
     if (received_is_received(received, p->id) == 1) {
-        LOGD("编号为 %d 包已经发送过了，丢弃\n", p->id);
+        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的曾经收取过的数据包，丢弃之\n", htons(baddr->sin_port), readb, p->id);
         free(p);
         
         received_destroy(received);
@@ -128,7 +131,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         return;
     }
     else {
-        LOGD("向目标服务器转发编号为 %d 的包\n", p->id);
+        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，转发该包\n", htons(baddr->sin_port), readb, p->id);
         received_add(received, p->id);
     }
     
@@ -138,13 +141,13 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     int sendb;
     sendb = send(g_target_fd, buf, buflen, MSG_DONTWAIT);
     if (sendb < 0) {
-        LOGW("无法向目标服务器发送数据：%s\n", strerror(errno));
+        LOGW("无法向目标服务器发送编号为 %d 的数据包：%s\n", p->id, strerror(errno));
     }
     else if (sendb == 0) {
-        LOGW("目标服务器可能已经断开了连接\n");
+        LOGW("目标服务器可能已经断开了连接，无法转发 %d 号数据包\n", p->id);
     }
     else {
-        LOGD("向目标服务器发送了 %d 字节数据：%s\n", buflen, buf);
+        //LOGD("成功向目标服务器发送了 %d 字节数据：%s\n", buflen, buf);
     }
     
     free(p);

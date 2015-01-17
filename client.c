@@ -80,7 +80,7 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     buf = malloc(buflen);
     memset(buf, 0x00, buflen);
     
-    LOGD("收到从 %d 发来的数据\n", w->fd);
+    //LOGD("收到从 %d 发来的数据\n", w->fd);
     
     static received_t *received = NULL;
     if (received == NULL) {
@@ -91,17 +91,17 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     readb = recv(w->fd, buf, buflen, 0);
     if (readb < 0) {
-        LOGW("远程桥可能断开了连接：%s\n", strerror(errno));
+        LOGW("远程桥（%d）可能断开了连接：%s\n", w->fd, strerror(errno));
         free(buf);
         return;
     }
     else if (readb == 0) {
-        LOGW("无法从远程桥接收数据，远程桥可能已经断开了连接\n");
+        LOGW("无法从远程桥（%d）接收数据，远程桥可能已经断开了连接\n", w->fd);
         free(buf);
         return;
     }
     else {
-        LOGD("从远程桥收取了 %d 字节数据：%s\n", readb, (char*)buf + sizeof(packet_t));
+        //LOGD("从远程桥（%d）收取了 %d 字节数据\n", w->fd, readb);
     }
     
     packet_t* c;
@@ -109,43 +109,45 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     buf = buf + sizeof(packet_t);
     
     if (c->type == PKT_TYPE_CTL) {
-        LOGD("收到控制包数据，丢弃\n");
+        LOGD("收到控制包数据，丢弃，数据包编号为 %d\n", c->id);
         free(c);
         return;
     }
     else if (c->type != PKT_TYPE_DATA) {
+        LOGE("数据包类型错误, type=%d, id=%d\n", c->type, c->id);
         free(c);
-        LOGE("数据包类型错误, type=%d\n", c->type);
         return;
     }
     
-    LOGD("从远程桥收到 %d 字节数据(fd=%d): %s\n", c->buflen, w->fd, buf);
+    
     
     /// 简单地丢弃已经收过的包
     if (received_is_received(received, c->id) != 0) {
         /// 已经收过包了
-        LOGD("已经收取过 id=%d 的包了\n", c->id);
+        LOGD("从远程桥（%d）收到长度为 %d 的曾经收取过的编号为 %d 的包，丢弃之\n", w->fd, c->buflen, c->id);
         free(c);
         return;
     }
     else {
         received_add(received, c->id);
-        LOGD("成功收取 id=%d 的包\n", c->id);
+        LOGD("从远程桥（%d）收到 %d 字节的数据包，包编号 %d\n", w->fd, c->buflen, c->id);
     }
     
     received_try_dropdead(received, 30);
     
     
+    
+    /// 将收到的数据包转发到客户端
     int sendb;
     sendb = sendto(g_listen_fd, buf, c->buflen, MSG_DONTWAIT, &g_client_addr, g_client_addrlen);
     if (sendb < 0) {
-        LOGW("无法向客户端发送数据：%s\n", strerror(errno));
+        LOGW("无法向客户端转发编号为 %d 的数据包：%s\n", c->id, strerror(errno));
     }
     else if (sendb == 0) {
-        LOGW("客户端可能已经断开了连接\n");
+        LOGW("客户端可能已经断开了连接，无法转发编号为 %d 的数据包\n", c->id);
     }
     else {
-        LOGD("向客户端(:%u)发送了 %d 字节数据：%s\n", ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), sendb, buf);
+        LOGD("向客户端(端口 %u)转发了 %d 字节长度的编号为 %d 的数据包\n", ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), sendb, c->id);
     }
     
     free(c);
@@ -176,15 +178,15 @@ int init_recv_ev(int fd) {
 int connect_to_server(struct list_head *list, char* host, int port) {
     int fd;
     
-    LOGD("connecting to %s:%d\n", host, port);
+    LOGD("正在连接到远程主机 %s:%d\n", host, port);
     
     fd = net_connect(host, port, SOCK_DGRAM);
     if (fd < 0) {
-        LOGW("无法连接到 %s:%d: %s\n", host, port, strerror(errno));
+        LOGW("无法连接到远程主机 %s:%d: %s\n", host, port, strerror(errno));
         return -1;
     }
     else {
-        LOGI("成功连接到 %s:%d，fd 是 %d\n", host, port, fd);
+        LOGI("成功连接到远程主机 %s:%d，fd 是 %d\n", host, port, fd);
     }
     
     connections_t* c = (connections_t*)malloc(sizeof(connections_t));
@@ -202,7 +204,6 @@ int connect_to_server(struct list_head *list, char* host, int port) {
 
 
 int connect_to_servers(struct list_head *list, char* server_list_path) {
-    int i;
     char host[1024];
     char line[1024];
     int port;

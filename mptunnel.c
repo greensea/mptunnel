@@ -53,7 +53,7 @@ int packet_send(int fd, char* buf, int buflen, int id) {
     }
     else {
         //LOGD("向 %d 发送了 %d 字节消息“%s”\n", fd, sendb, (char*)(p + 1));
-        LOGD("向 %d 发送了 %d 字节消息\n", fd, sendb);
+        LOGD("向 %d 发送了 %d 字节消息，编号为 %d\n", fd, sendb, id);
     }
     
     packet_free(p);
@@ -152,7 +152,7 @@ int received_list_add(received_t* r, int id) {
     n = malloc(sizeof(*n));
     memset(n, 0x00, sizeof(*n));
     n->ctime = time(NULL);
-    LOGD("(id=%d)n->ctime = %ld\n", id, n->ctime);
+    //LOGD("(id=%d)n->ctime = %ld\n", id, n->ctime);
     n->id = id;
     
     pthread_mutex_lock(&r->rlist_mutex);
