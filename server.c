@@ -128,6 +128,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         
         received_destroy(received);
         free(received);
+        received = NULL;
         
         return;
     }
@@ -136,7 +137,11 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         received_add(received, p->id);
     }
     
-    received_try_dropdead(received, 30);
+    
+    if (received != NULL) {
+        received_try_dropdead(received, 30);
+    }
+    
     
     /// 发送给目标服务器
     int sendb;
