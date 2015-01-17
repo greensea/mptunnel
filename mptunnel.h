@@ -7,6 +7,8 @@
 #include <time.h>
 #include <string.h>
 
+#include "linklist.h"
+
 
 #define LOG_ERROR 1
 #define LOG_WARNING 2
@@ -48,11 +50,31 @@ typedef struct packet_t {
 } packet_t;
 
 
+typedef struct received_list_t {
+    struct list_head list_node;
+    long ctime;
+    int id;
+} received_list_t;
+    
+
+typedef struct received_t {
+    int min_con_id;
+    time_t last_dropdead_time;
+    struct list_head rlist;
+    pthread_mutex_t rlist_mutex;
+} received_t;
+
+
 packet_t* packet_make(enum packet_type type, const char* buf, int buflen, int);
 int packet_free(packet_t* p);
 int packet_send(int fd, char* buf, int buflen, int);
     
-int packet_received(int id);
-int packet_is_received(int _id);
+//int packet_received(int id);
+//int packet_is_received(int _id);
 
+int received_is_received(received_t* r, int id);
+int received_try_dropdead(received_t* r, int ttl);
+int received_init(received_t* r);
+int received_add(received_t* r, int id);
+int received_destroy(received_t* r);
 #endif

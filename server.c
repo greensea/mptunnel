@@ -46,6 +46,12 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     int readb;
     struct sockaddr_in *baddr;
     
+    static received_t *received = NULL;
+    if (received == NULL) {
+        received = malloc(sizeof(*received));
+        received_init(received);
+    }
+    
     buf = malloc(buflen);
     memset(buf, 0x00, buflen);
     
@@ -108,15 +114,21 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     buflen = p->buflen;
     buf = (char*)buf + sizeof(*p);
     
-    if (packet_is_received(p->id) == 1) {
+    if (received_is_received(received, p->id) == 1) {
         LOGD("编号为 %d 包已经发送过了，丢弃\n", p->id);
         free(p);
+        
+        received_destroy(received);
+        free(received);
+        
         return;
     }
     else {
         LOGD("向目标服务器转发编号为 %d 的包\n", p->id);
-        packet_received(p->id);
+        received_add(received, p->id);
     }
+    
+    received_try_dropdead(received, 30);
     
     /// 发送给目标服务器
     int sendb;

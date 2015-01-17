@@ -76,6 +76,12 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     LOGD("收到从 %d 发来的数据\n", w->fd);
     
+    static received_t *received = NULL;
+    if (received == NULL) {
+        received = malloc(sizeof(*received));
+        received_init(received);
+    }
+    
     
     readb = recv(w->fd, buf, buflen, 0);
     if (readb < 0) {
@@ -110,16 +116,19 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     LOGD("从远程桥收到 %d 字节数据(fd=%d): %s\n", c->buflen, w->fd, buf);
     
     /// 简单地丢弃已经收过的包
-    if (packet_is_received(c->id) != 0) {
+    if (received_is_received(received, c->id) != 0) {
         /// 已经收过包了
         LOGD("已经收取过 id=%d 的包了\n", c->id);
         free(c);
         return;
     }
     else {
-        packet_received(c->id);
+        received_add(received, c->id);
         LOGD("成功收取 id=%d 的包\n", c->id);
     }
+    
+    received_try_dropdead(received, 30);
+    
     
     int sendb;
     sendb = sendto(g_listen_fd, buf, c->buflen, MSG_DONTWAIT, &g_client_addr, g_client_addrlen);
