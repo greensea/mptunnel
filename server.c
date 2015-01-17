@@ -21,8 +21,8 @@
 #include "buffer.h"
 #include "client.h"
 
-#define TARGET_HOST "192.168.2.201"
-#define TARGET_PORT 4002
+#define TARGET_HOST "104.160.35.99"
+#define TARGET_PORT 993
 
 static struct ev_loop * g_ev_reactor = NULL;
 
@@ -86,6 +86,9 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         if (exists == 0) {
             list_add(&b->list, &g_bridge_list);
         }
+	else {
+            free(b);
+	}
         
         pthread_mutex_unlock(&g_bridge_list_mutex);
     }
@@ -111,6 +114,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     if (packet_is_received(p->id) == 1) {
         LOGD("编号为 %d 包已经发送过了，丢弃\n", p->id);
         free(p);
+
         return;
     }
     else {
