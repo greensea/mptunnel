@@ -210,15 +210,28 @@ int send_to_servers(char* buf, int buflen) {
     list_for_each(l, &g_bridge_list) {
         b = list_entry(l, bridge_t, list);
     
-        sendb = sendto(g_listen_fd, p, buflen + sizeof(*p), 0, &b->addr, b->addrlen);
-        if (sendb < 0) {
-            LOGW("无法向桥(%s:%d)发送 %d 字节数据数据`%s', %s\n", ipstr, ntohs(baddr->sin_port), buflen, buf, strerror(errno));
-        }
-        else if (sendb == 0) {
-            LOGW("无法向桥发送数据，桥可能已经断开\n");
-        }
-        else {
-            LOGD("向桥发送了 %d 字节数据: %s\n", buflen + sizeof(*p), buf);
+        int totalb = 0;
+        int tosend = 0;
+        
+        while (totalb < buflen + sizeof(*p)) {
+            tosend = buflen + sizeof(*p) - totalb;
+            if (tosend > 8000) {
+                tosend = 8000;
+            }
+            
+            sendb = sendto(g_listen_fd, ((char*)p) + totalb, tosend , 0, &b->addr, b->addrlen);
+            if (sendb < 0) {
+                LOGW("无法向桥(%s:%d)发送 %d 字节数据数据`%s', %s\n", ipstr, ntohs(baddr->sin_port), buflen, buf, strerror(errno));
+                break;
+            }
+            else if (sendb == 0) {
+                LOGW("无法向桥发送数据，桥可能已经断开\n");
+                break;
+            }
+            else {
+                LOGD("向桥发送了 %d 字节数据: %s\n", sendb, buf);
+                totalb += sendb;
+            }
         }
     }
     
