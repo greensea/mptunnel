@@ -26,3 +26,6 @@ server
 client
 bridge
 *.log
+
+client.conf
+server.conf
