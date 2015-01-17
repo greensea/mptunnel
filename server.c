@@ -231,7 +231,7 @@ int send_to_servers(char* buf, int buflen) {
             LOGW("无法向桥发送数据，桥可能已经断开\n");
         }
         else {
-            LOGD("向桥（端口：%d）发送了 %d 字节数据，包编号 %d\n", ipstr, ntohs(baddr->sin_port), sendb, p->id);
+            LOGD("向桥（端口：%u）发送了 %d 字节数据，包编号 %d\n", ipstr, ntohs(baddr->sin_port), sendb, p->id);
         }
     }
     
