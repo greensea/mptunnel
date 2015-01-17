@@ -225,9 +225,10 @@ int received_add(received_t* r, int id) {
  * @param int               丢弃多少秒内未收到的包。
  */
 int received_try_dropdead(received_t* r, int ttl) {
-    if (r->last_dropdead_time + ttl <= time(NULL)) {
-        LOGD("进行一次丢包清理，ttl = %d\n", ttl);
-        r->last_dropdead_time = time(NULL);
+    long ts = time(NULL);
+    if (r->last_dropdead_time + ttl <= ts) {
+        LOGD("进行一次丢包清理，ttl = %d，上次清理时间是 %ld, 当前时间是 %ld, 时间差是 %ld\n", ttl, r->last_dropdead_time, ts, ts - r->last_dropdead_time);
+        r->last_dropdead_time = ts;
     }
     else {
         return 0;

@@ -61,7 +61,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     b->addrlen = sizeof(b->addr);
     baddr = (struct sockaddr_in*)&b->addr;
     
-    LOGD("收到从桥端（fd=%d）发来的数据\n", w->fd);
+    //LOGD("收到从桥端（fd=%d）发来的数据\n", w->fd);
     
     readb = recvfrom(w->fd, buf, buflen, 0, &b->addr, &b->addrlen);
     if (readb < 0) {
