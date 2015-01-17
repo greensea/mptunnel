@@ -126,9 +126,9 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的曾经收取过的数据包，丢弃之\n", htons(baddr->sin_port), readb, p->id);
         free(p);
         
-        received_destroy(received);
-        free(received);
-        received = NULL;
+        //received_destroy(received);
+        //free(received);
+        //received = NULL;
         
         return;
     }
