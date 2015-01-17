@@ -221,6 +221,7 @@ int send_to_servers(char* buf, int buflen) {
     
     list_for_each(l, &g_bridge_list) {
         b = list_entry(l, bridge_t, list);
+        baddr = (struct sockaddr_in*)&b->addr;
     
         sendb = sendto(g_listen_fd, p, buflen + sizeof(*p), 0, &b->addr, b->addrlen);
         if (sendb < 0) {
