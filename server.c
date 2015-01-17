@@ -21,8 +21,6 @@
 #include "buffer.h"
 #include "client.h"
 
-#define TARGET_HOST "192.168.2.201"
-#define TARGET_PORT 4002
 
 static struct ev_loop * g_ev_reactor = NULL;
 
@@ -34,6 +32,9 @@ static pthread_mutex_t g_bridge_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int g_listen_fd = -1;
 static int g_target_fd = -1;
 
+static int g_listen_port = 0;
+static char *g_target_host = NULL;
+static int g_target_port = 0;
 
 
 
@@ -230,7 +231,7 @@ void* server_thread(void* ptr) {
     buflen = 65536;
     buf = malloc(buflen);
     
-    g_target_fd = net_connect(TARGET_HOST, TARGET_PORT, SOCK_DGRAM);
+    g_target_fd = net_connect(g_target_host, g_target_port, SOCK_DGRAM);
     if (g_target_fd < 0) {
         LOGE("无法创建到目标服务器的连接：%s\n", strerror(errno));
         return NULL;
@@ -245,13 +246,13 @@ void* server_thread(void* ptr) {
             }
             else {
                 LOGI("目标服务器断开了连接: %s\n", strerror(errno));
-                g_target_fd = net_connect(TARGET_HOST, TARGET_PORT, SOCK_DGRAM);
+                g_target_fd = net_connect(g_target_host, g_target_port, SOCK_DGRAM);
                 continue;
             }
         }
         else if (readb == 0) {
             LOGW("无法从目标服务器收取消息，服务器断开了连接\n");
-            g_target_fd = net_connect(TARGET_HOST, TARGET_PORT, SOCK_DGRAM);
+            g_target_fd = net_connect(g_target_host, g_target_port, SOCK_DGRAM);
             continue;
         }
         else {
@@ -272,6 +273,31 @@ void* server_thread(void* ptr) {
 
 int main(int argc, char** argv) {
     int clientfd, listenfd;
+    
+    if (argc <= 3) {
+        fprintf(stderr, "Usage: <%s> <listen_port> <target_ip> <target_port>\n", argv[0]);
+        exit(-1);
+    }
+    else {
+        /// 载入配置信息
+        g_listen_port = atoi(argv[1]);
+        g_target_host = strdup(argv[2]);
+        g_target_port = atoi(argv[3]);
+        
+        if (g_listen_port <= 0 || g_listen_port >= 65536) {
+            LOGE("Invalid listen port `%s'\n", argv[1]);
+            exit(-2);
+        }
+        if (g_target_port <= 0 || g_target_port >= 65536) {
+            LOGE("Invalid target port `%s'\n", argv[3]);
+            exit(-3);
+        }
+        
+        LOGD("配置信息：本地监听端口：%d\n", g_listen_port);
+        LOGD("配置信息：目标服务器：%s:%d\n", g_target_host, g_target_port);
+    }
+    
+    
     
     LOGD("初始化 EV 处理线程\n");
     pthread_t tid;
