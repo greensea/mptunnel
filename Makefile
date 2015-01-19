@@ -2,14 +2,14 @@ CC = gcc
 CFLAGS = -g -Wall -I/usr/include/libev
 LDFLAGS = -g  -lev -lpthread
 
-all: client server
+all: mpclient mpserver
 
 
-client: client.o net.o mptunnel.o rbtree.o
-	$(CC) $(LDFLAGS) $^  -o client
+mpclient: client.o net.o mptunnel.o rbtree.o
+	$(CC) $(LDFLAGS) $^  -o mpclient
 
-server: server.c mptunnel.o net.o
-	$(CC) $(LDFLAGS) $^  -o server
+mpserver: server.c mptunnel.o net.o
+	$(CC) $(LDFLAGS) $^  -o mpserver
 
 
 SOURCE = $(wildcard *.c)
@@ -22,4 +22,4 @@ SOURCE = $(wildcard *.c)
 clean:
 	rm -f *.o
 	rm -f *.d
-	rm -f server
+	rm -f mpclient mpserver
