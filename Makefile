@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -I/usr/include/libev 
+CFLAGS = -g -Wall -I/usr/include/libev
 LDFLAGS = -g  -lev -lpthread
 
 all: client server

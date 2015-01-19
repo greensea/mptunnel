@@ -29,3 +29,5 @@ bridge
 
 client.conf
 server.conf
+
+callgrind*
