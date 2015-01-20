@@ -8,7 +8,7 @@ all: mpclient mpserver
 mpclient: client.o net.o mptunnel.o rbtree.o
 	$(CC) $(LDFLAGS) $^  -o mpclient
 
-mpserver: server.c mptunnel.o net.o
+mpserver: server.c mptunnel.o net.o rbtree.o
 	$(CC) $(LDFLAGS) $^  -o mpserver
 
 

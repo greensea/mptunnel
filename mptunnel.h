@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "linklist.h"
+#include "rbtree.h"
 
 
 /// 转发时最大的包长度
@@ -55,14 +56,15 @@ typedef struct packet_t {
 
 
 typedef struct received_list_t {
-    struct list_head list_node;
+    struct rb_node rbnode;
     long ctime;
     int id;
 } received_list_t;
     
 
 typedef struct received_t {
-    int min_con_id;
+    int min_con_id;     /// 连续收到的最小包编号
+    int max_id;         /// 目前已经收到的最大包编号
     time_t last_dropdead_time;
     struct list_head rlist;
     pthread_mutex_t rlist_mutex;
@@ -81,4 +83,7 @@ int received_try_dropdead(received_t* r, int ttl);
 int received_init(received_t* r);
 int received_add(received_t* r, int id);
 int received_destroy(received_t* r);
+
+received_list_t* received_rbtree_get(struct rb_root*, int);
+int received_rbtree_add(struct rb_root* , received_list_t*);
 #endif

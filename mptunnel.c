@@ -14,6 +14,11 @@
 //static int* g_received_id = NULL;
 
 /**
+ * 已经收到的包的红黑树根
+ */
+static struct rb_root g_received_rbtree = RB_ROOT;
+
+/**
  * 组装一个数据包，组装出来的包需要调用 packet_free 进行释放
  */
 packet_t* packet_make(enum packet_type type, const char* buf, int buflen, int id) {
@@ -122,17 +127,18 @@ int received_destroy(received_t* r) {
  * 收包管理器，从列表中删除一个 id
  */
 int received_list_del(received_t* r, int id) {
+    received_list_t* c;
+    
     /// 从“已收到包列表”中删除这个 id 
     pthread_mutex_lock(&r->rlist_mutex);
     
-    struct list_head *pos, *n;
-    received_list_t* c;
-    list_for_each_safe(pos, n, &r->rlist) {
-        c = list_entry(n, received_list_t, list_node);
-        if (c->id == id) {
-            list_del(&c->list_node);
-            break;
-        }
+    c = received_rbtree_get(&g_received_rbtree, id);
+    if (c != NULL) {
+        rb_erase(&c->rbnode, &g_received_rbtree);
+        free(c);
+    }
+    else {
+        LOGW("已经收到的包列表中没有编号为 %d 的包\n", id);
     }
     
     pthread_mutex_unlock(&r->rlist_mutex);
@@ -152,12 +158,12 @@ int received_list_add(received_t* r, int id) {
     n = malloc(sizeof(*n));
     memset(n, 0x00, sizeof(*n));
     n->ctime = time(NULL);
-    //LOGD("(id=%d)n->ctime = %ld\n", id, n->ctime);
     n->id = id;
     
     pthread_mutex_lock(&r->rlist_mutex);
     
-    list_add_tail(&n->list_node, &r->rlist);
+    //list_add_tail(&n->list_node, &r->rlist);
+    received_rbtree_add(&g_received_rbtree, n);
     
     pthread_mutex_unlock(&r->rlist_mutex);
     
@@ -174,6 +180,9 @@ int received_is_received(received_t* r, int id) {
     if (id <= r->min_con_id) {
         return 1;
     }
+    else if (id > r->max_id) {
+        return 0;
+    }
     else {
         int ret = 0;
         
@@ -181,11 +190,13 @@ int received_is_received(received_t* r, int id) {
         pthread_mutex_lock(&r->rlist_mutex);
         
         struct received_list_t *n;
-        list_for_each_entry(n, &r->rlist, list_node) {
-            if (n->id == id) {
-                ret = 1;
-                break;
-            }
+        
+        n = received_rbtree_get(&g_received_rbtree, id);
+        if (n != NULL) {
+            ret = 1;
+        }
+        else {
+            ret = 0;
         }
         
         pthread_mutex_unlock(&r->rlist_mutex);
@@ -215,6 +226,10 @@ int received_add(received_t* r, int id) {
         received_list_add(r, id);
     }
     
+    if (id > r->max_id) {
+        r->max_id = id;
+    }
+    
     return 0;
 }
 
@@ -238,19 +253,13 @@ int received_try_dropdead(received_t* r, int ttl) {
     pthread_mutex_lock(&r->rlist_mutex);
     
     do {
-        received_list_t *pos = NULL, *n = NULL, *minn = NULL;
-        int minid = INT_MAX;
-        
+        received_list_t *minn = NULL;
+        struct rb_node* rbnode = rbnode;
         /// 找列表中最小的 id，判断其 ctime 是否距离现在已经超过了 ttl 秒，如果是，则丢弃该 id 之前的所有数据包
         /// 如果其 ctime 距离现在没有超过 ttl 秒，则退出清理过程
         
-        list_for_each_entry_safe(pos, n, &r->rlist, list_node) {
-            if (pos->id < minid) {
-                minn = pos;
-                minid = minn->id;
-            }
-        }
-        
+        rbnode = rb_first(&g_received_rbtree);
+        minn = container_of(rbnode, received_list_t, rbnode);
         
         if (minn != NULL) {
             if (minn->ctime + ttl <= time(NULL)) {
@@ -259,7 +268,7 @@ int received_try_dropdead(received_t* r, int ttl) {
                 
                 LOGD("数据包“%d”收到的时间已经过去了 %ld 秒，认为之前所有的数据包都已经收到了，当前最小已收到连续包 id 是 %d\n", minn->id, time(NULL) - minn->ctime, r->min_con_id);
                 
-                list_del(&minn->list_node);
+                rb_erase(&minn->rbnode, &g_received_rbtree);
                 r->min_con_id = minn->id;
                 free(minn);
             }
@@ -281,3 +290,62 @@ int received_try_dropdead(received_t* r, int ttl) {
     
     return 0;
 }
+
+
+
+
+
+int received_rbtree_add(struct rb_root* root, received_list_t *node) {
+    struct rb_node **new = &(root->rb_node);
+    struct rb_node *parent = NULL;
+    received_list_t* cur = NULL;
+    
+    while (*new) {
+        parent = *new;
+        cur = container_of(*new, received_list_t, rbnode);
+        
+        if (node->id < cur->id) {
+            new = &(*new)->rb_left;
+        }
+        else if (node->id > cur->id) {
+            new = &(*new)->rb_right;
+        }
+        else {
+            LOGW("编号为 %d 的包已经在已收到的包列表中了\n", cur->id);
+            return 0;
+        }
+    }
+        
+    rb_link_node(&node->rbnode, parent, new);
+    rb_insert_color(&node->rbnode, root);
+    
+    return 0;
+}
+
+int received_rbtree_del(struct rb_root* root, received_list_t *node) {
+    rb_erase(&node->rbnode, root);
+    return 0;
+}
+
+received_list_t* received_rbtree_get(struct rb_root* root, int id) {
+    received_list_t* node = NULL;
+    struct rb_node* cur = root->rb_node;
+    
+    while (cur) {
+        node = container_of(cur, received_list_t, rbnode);
+        
+        if (id < node->id) {
+            cur = cur->rb_left;
+        }
+        else if (id > node->id) {
+            cur = cur->rb_right;
+        }
+        else {
+            return node;
+        }
+    }
+    
+    return NULL;
+}
+
+
