@@ -78,7 +78,7 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     int readb;
     
     buf = malloc(buflen);
-    memset(buf, 0x00, buflen);
+    //memset(buf, 0x00, buflen);    /// 为了提升效率，不再初始化接收缓存
     
     //LOGD("收到从 %d 发来的数据\n", w->fd);
     
