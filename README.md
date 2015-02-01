@@ -1,7 +1,7 @@
 # mptunnel
 MultiPath Tunnel (Simpified user space MPUDP)
 
-## About
+## ABOUT
 
 MultiPath Tunnel is a multipath UDP implementation in user space. Like MultiPath TCP, you can establish
 several connections from local to remote server.
@@ -10,7 +10,7 @@ MPTCP(MultiPath TCP) is a good idea to make network connection robust, but it on
 searching for MPUDP implementation but got nothing, so I write this tool.
 
 
-## Conception
+## CONCEPTION
 
 ```
                         .---- bridge server 1 ----.
@@ -36,7 +36,7 @@ Bridge servers is simple, it only forward packets from mpclient to mpserver, or 
 mpclient. You can use _nc_ or _socat_ to deploy a bridge server.
 
 
-## Example
+## EXAMPLE
 
 I want to connection to my OpenVPN server, but the connection is unstable, packet loss ratio is high. The
 TCP throughput over the OpenVPN tunnel is very small due to high packet loss ratio. To increase TCP
@@ -78,4 +78,7 @@ Now I make OpenVPN client to connect localhost:3000 which mpclient listening on,
 establish an OpenVPN connection over MultiPath UDP tunnel.
 
 
+## BUGS
 
+* mptunnel add some control information into packets, including synchronous information. mpserver and mpclient must be start at the same time. If mpclient or mpserver terminated, you have to restart both mpserver and mpclient to reestablish the tunnel.
+* Currently you can only specify signle target host. Any one knows is there any C library of SOCKS5 proxy? I think making mpclient as a SOCKS proxy server will make it more easy to use.
