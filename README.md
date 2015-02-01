@@ -82,3 +82,10 @@ establish an OpenVPN connection over MultiPath UDP tunnel.
 
 * mptunnel add some control information into packets, including synchronous information. mpserver and mpclient must be start at the same time. If mpclient or mpserver terminated, you have to restart both mpserver and mpclient to reestablish the tunnel.
 * Currently you can only specify signle target host. Any one knows is there any C library of SOCKS5 proxy? I think making mpclient as a SOCKS proxy server will make it more easy to use.
+
+
+## DEPENDENCIES
+
+To compile mptunnel, these libraries are required:
+
+* libev
