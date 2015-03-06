@@ -20,6 +20,7 @@ typedef struct bridge_t {
     struct list_head list;
     struct sockaddr addr;
     socklen_t addrlen;
+    int rc_time;    /// 最后一次收到客户端数据包的时间
 } bridge_t;
 
 #endif

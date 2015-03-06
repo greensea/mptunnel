@@ -21,6 +21,8 @@
 #include "buffer.h"
 #include "client.h"
 
+#define UDP_KEEP_ALIVE 300
+
 
 static struct ev_loop * g_ev_reactor = NULL;
 
@@ -94,7 +96,10 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
             }
         }
         
+        b->rc_time = time(NULL);
+        
         if (exists != 1) {
+            /// 这是一个新客户端，将其添加到客户端列表中
             list_add(&b->list, &g_bridge_list);
         }
 
@@ -214,7 +219,7 @@ int send_to_servers(char* buf, int buflen) {
     p->id = ++id;
     p->buflen = buflen;
     memcpy(((char*)p) + sizeof(*p), buf, buflen);
-    
+    int ts = time(NULL);
     
     bridge_t *b;
     struct list_head *l;
@@ -222,7 +227,13 @@ int send_to_servers(char* buf, int buflen) {
     list_for_each(l, &g_bridge_list) {
         b = list_entry(l, bridge_t, list);
         baddr = (struct sockaddr_in*)&b->addr;
-    
+        
+        if (ts - b->rc_time > UDP_KEEP_ALIVE) {
+            LOGD("桥（%s:%u）空闲了 %d 秒，认为此桥已经断开，不向其转发数据包 %d\n", ipstr, ntohs(baddr->sin_port), ts - b->rc_time, p->id);
+            /// TODO: 删除此桥节点
+            continue;
+        }
+        
         sendb = sendto(g_listen_fd, p, buflen + sizeof(*p), 0, &b->addr, b->addrlen);
         if (sendb < 0) {
             LOGW("无法向桥(%s:%d)发送 %d 字节数据，包编号 %d: %s\n", ipstr, ntohs(baddr->sin_port), buflen, p->id, strerror(errno));
