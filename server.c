@@ -223,7 +223,7 @@ int send_to_servers(char* buf, int buflen) {
     p->buflen = buflen;
     memcpy(((char*)p) + sizeof(*p), buf, buflen);
     
-    mpencrypt(buf, buflen + sizeof(*p));
+    mpencrypt((char*)p, buflen + sizeof(*p));
     
     int ts = time(NULL);
     bridge_t *b;
