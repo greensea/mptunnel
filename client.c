@@ -105,8 +105,12 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     }
     
     packet_t* c;
+    
+    mpdecrypt(buf);
+    
     c = (packet_t*)buf;
     buf = buf + sizeof(packet_t);
+    
     
     if (c->type == PKT_TYPE_CTL) {
         LOGD("收到控制包数据，丢弃，数据包编号为 %d\n", c->id);

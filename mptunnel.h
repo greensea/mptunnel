@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "linklist.h"
 #include "rbtree.h"
@@ -50,6 +51,7 @@ enum packet_type {
 };
 
 typedef struct packet_t {
+    uint32_t iv;    /** 加密使用的 IV */
     enum packet_type type;
     int id;
     int buflen;     /** 数据长度（不包括 packet_t 自身） */
@@ -87,4 +89,10 @@ int received_destroy(received_t* r);
 
 received_list_t* received_rbtree_get(struct rb_root*, int);
 int received_rbtree_add(struct rb_root* , received_list_t*);
+
+
+void encrypt(char* _buf, int _size, uint32_t iv);
+void decrypt(char* _buf, int _size, uint32_t iv);
+void mpdecrypt(char* _buf);
+void mpencrypt(char* _buf, int _buflen);
 #endif

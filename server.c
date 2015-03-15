@@ -109,7 +109,10 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     /// 解包，然后发送给目标服务器
     packet_t* p;
+    
+    mpdecrypt(buf);
     p = (packet_t*)buf;
+    
     if (p->type == PKT_TYPE_CTL) {
         LOGD("从桥端(:%u)收取了 %d 字节数据编号为 %d 的数据包，但这是一个控制包，丢弃之\n", htons(baddr->sin_port), readb, p->id);
         free(buf);
@@ -219,8 +222,10 @@ int send_to_servers(char* buf, int buflen) {
     p->id = ++id;
     p->buflen = buflen;
     memcpy(((char*)p) + sizeof(*p), buf, buflen);
-    int ts = time(NULL);
     
+    mpencrypt(buf, buflen + sizeof(*p));
+    
+    int ts = time(NULL);
     bridge_t *b;
     struct list_head *l;
     

@@ -32,6 +32,8 @@ packet_t* packet_make(enum packet_type type, const char* buf, int buflen, int id
     p->buflen = buflen;
     memcpy(p + 1, buf, buflen);
     
+    mpencrypt((char*)p, sizeof(*p) + buflen);
+    
     return p;
 }
 
@@ -41,7 +43,7 @@ int packet_free(packet_t* p) {
     
     return 0;
 }
-    
+
     
     
 int packet_send(int fd, char* buf, int buflen, int id) {
@@ -49,7 +51,7 @@ int packet_send(int fd, char* buf, int buflen, int id) {
     
     packet_t* p = packet_make(PKT_TYPE_DATA, buf, buflen, id);
 
-    sendb = send(fd, p, sizeof(*p) + p->buflen, MSG_DONTWAIT);
+    sendb = send(fd, p, sizeof(*p) + buflen, MSG_DONTWAIT);
     if (sendb < 0) {
         LOGW("无法向发送 %d 字节数据: %s\n",  buflen, strerror(errno));
     }
@@ -349,3 +351,44 @@ received_list_t* received_rbtree_get(struct rb_root* root, int id) {
 }
 
 
+/**
+ * 加密和解密内容
+ * 
+ * @param char*     要加密的内容
+ * @param int       要加密内容的长度
+ * @param uint32_t  初始化向量
+ */
+void encrypt(char* _buf, int _size, uint32_t iv) {
+    int i;
+    unsigned char *buf = (unsigned char*)_buf;
+    
+    for (i = 0; i < _size; i++) {
+        buf[i] ^= iv;
+    }
+}
+
+
+void decrypt(char* _buf, int _size, uint32_t iv) {
+    encrypt(_buf, _size, iv);
+}
+
+/**
+ * 对一个完整的 mptunnel 数据包进行加密和解密
+ */
+void mpdecrypt(char* _buf) {
+    /// 首先解密 packet_t
+    packet_t *p = (packet_t*)_buf;
+    
+    decrypt(_buf + sizeof(p->iv), sizeof(packet_t) - sizeof(p->iv), p->iv);
+    
+    /// 接着解密内容
+    decrypt(_buf + sizeof(packet_t), p->buflen, p->iv);
+}
+
+void mpencrypt(char* _buf, int _buflen) {
+    packet_t *p = (packet_t*)_buf;
+
+    p->iv = rand();
+    
+    encrypt(_buf + sizeof(p->iv), _buflen - sizeof(p->iv), p->iv);
+}
