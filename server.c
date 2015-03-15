@@ -229,7 +229,7 @@ int send_to_servers(char* buf, int buflen) {
         baddr = (struct sockaddr_in*)&b->addr;
         
         if (ts - b->rc_time > UDP_KEEP_ALIVE) {
-            LOGD("桥（%s:%u）空闲了 %d 秒，认为此桥已经断开，不向其转发数据包 %d\n", ipstr, ntohs(baddr->sin_port), ts - b->rc_time, p->id);
+            //LOGD("桥（%s:%u）空闲了 %d 秒，认为此桥已经断开，不向其转发数据包 %d\n", ipstr, ntohs(baddr->sin_port), ts - b->rc_time, p->id);
             /// TODO: 删除此桥节点
             continue;
         }
