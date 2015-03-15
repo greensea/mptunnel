@@ -217,12 +217,14 @@ int send_to_servers(char* buf, int buflen) {
     
     
     packet_t* p;
+    packet_t rawp;
     p = (packet_t*)malloc(sizeof(*p) + buflen);
     p->type = PKT_TYPE_DATA;
     p->id = ++id;
     p->buflen = buflen;
     memcpy(((char*)p) + sizeof(*p), buf, buflen);
     
+    rawp = *p;
     mpencrypt((char*)p, buflen + sizeof(*p));
     
     int ts = time(NULL);
@@ -241,13 +243,13 @@ int send_to_servers(char* buf, int buflen) {
         
         sendb = sendto(g_listen_fd, p, buflen + sizeof(*p), 0, &b->addr, b->addrlen);
         if (sendb < 0) {
-            LOGW("无法向桥(%s:%d)发送 %d 字节数据，包编号 %d: %s\n", ipstr, ntohs(baddr->sin_port), buflen, p->id, strerror(errno));
+            LOGW("无法向桥(%s:%d)发送 %d 字节数据，包编号 %d: %s\n", ipstr, ntohs(baddr->sin_port), buflen, rawp.id, strerror(errno));
         }
         else if (sendb == 0) {
             LOGW("无法向桥发送数据，桥可能已经断开\n");
         }
         else {
-            LOGD("向桥（端口：%u）发送了 %d 字节数据，包编号 %d\n", ntohs(baddr->sin_port), sendb, p->id);
+            LOGD("向桥（端口：%u）发送了 %d 字节数据，包编号 %d\n", ntohs(baddr->sin_port), sendb, rawp.id);
         }
     }
     
