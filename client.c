@@ -91,7 +91,7 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     readb = recv(w->fd, buf, buflen, 0);
     if (readb < 0) {
-        LOGW("远程桥（%d）可能断开了连接：%s\n", w->fd, strerror(errno));
+        LOGW("接收数据时出错，远程桥（%d）可能断开了连接：%s\n", w->fd, strerror(errno));
         free(buf);
         return;
     }
