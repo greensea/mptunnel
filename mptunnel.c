@@ -427,16 +427,6 @@ uint32_t lfsr_rand(uint32_t *st) {
                 
         b = b32 ^ b30 ^ b26 ^ b25;
         
-        
-        r >>= 1;
-        if ((*st & 0x00000001) == 0x00000001) {
-            r |= 0x80000000;
-        }
-        else {
-            r &= 0x7fffffff;
-        }
-        
-        
         *st >>= 1;
         if (b == 0) {
             *st &= 0x7fffffff;
@@ -445,6 +435,8 @@ uint32_t lfsr_rand(uint32_t *st) {
             *st |= 0x80000000;
         }
     }
+    
+    r = *st;
     
     return r;
 }
