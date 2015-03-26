@@ -48,8 +48,7 @@ int packet_free(packet_t* p) {
     
 int packet_send(int fd, char* buf, int buflen, int id) {
     int sendb;
-    
-    packet_t* p = packet_make(PKT_TYPE_DATA, buf, buflen, id);
+        packet_t* p = packet_make(PKT_TYPE_DATA, buf, buflen, id);
 
     sendb = send(fd, p, sizeof(*p) + buflen, MSG_DONTWAIT);
     if (sendb < 0) {
@@ -358,17 +357,19 @@ received_list_t* received_rbtree_get(struct rb_root* root, int id) {
  * @param int       要加密内容的长度
  * @param uint32_t  初始化向量
  */
-void encrypt(char* _buf, int _size, uint32_t iv) {
+void encrypt(char* _buf, int _size, uint32_t *iv) {
     int i;
     unsigned char *buf = (unsigned char*)_buf;
+    unsigned char ivc;
     
     for (i = 0; i < _size; i++) {
-        buf[i] ^= iv;
+        ivc = lfsr_rand(iv) % 255;
+        buf[i] ^= ivc;
     }
 }
 
 
-void decrypt(char* _buf, int _size, uint32_t iv) {
+void decrypt(char* _buf, int _size, uint32_t* iv) {
     encrypt(_buf, _size, iv);
 }
 
@@ -378,17 +379,64 @@ void decrypt(char* _buf, int _size, uint32_t iv) {
 void mpdecrypt(char* _buf) {
     /// 首先解密 packet_t
     packet_t *p = (packet_t*)_buf;
+    uint32_t iv;
     
-    decrypt(_buf + sizeof(p->iv), sizeof(packet_t) - sizeof(p->iv), p->iv);
+    iv = p->iv;
+    
+    decrypt(_buf + sizeof(p->iv), sizeof(packet_t) - sizeof(p->iv), &iv);
     
     /// 接着解密内容
-    decrypt(_buf + sizeof(packet_t), p->buflen, p->iv);
+    decrypt(_buf + sizeof(packet_t), p->buflen, &iv);
 }
 
 void mpencrypt(char* _buf, int _buflen) {
     packet_t *p = (packet_t*)_buf;
+    uint32_t iv;
 
-    p->iv = rand();
+    iv = rand();
+    p->iv = iv;
     
-    encrypt(_buf + sizeof(p->iv), _buflen - sizeof(p->iv), p->iv);
+    encrypt(_buf + sizeof(p->iv), _buflen - sizeof(p->iv), &iv);
+}
+
+
+
+/**
+ * 一个简单的线性反馈移位寄存器随机数发生器
+ * 
+ * @param uint32_t      随机数种子（状态），该状态的值会被改变
+ * @return uint32_t     一个 32 位无符号整型的随机数
+ */
+uint32_t lfsr_rand(uint32_t *st) {
+    unsigned char b32, b30, b26, b25, b;
+    uint32_t r = 0x00;
+    int i;
+    
+    ///
+    /** 在我们的应用中不需要高强度的随机数
+    if (*st == 0) {
+        *st = 1;
+    }
+    */
+    
+    for (i = 0; i < 32; i++) {
+        b32 = *st & 0x00000001;
+        b30 = (*st & (0x00000001 << 2)) >> 2;
+        b26 = (*st & (0x00000001 << 6)) >> 6;
+        b25 = (*st & (0x00000001 << 7)) >> 7;
+                
+        b = b32 ^ b30 ^ b26 ^ b25;
+        
+        *st >>= 1;
+        if (b == 0) {
+            *st &= 0x7fffffff;
+        }
+        else {
+            *st |= 0x80000000;
+        }
+    }
+    
+    r = *st;
+    
+    return r;
 }
