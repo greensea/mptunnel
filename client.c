@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     }
     
     
-    g_listen_fd = net_bind("0.0.0.0", 3000, SOCK_DGRAM);
+    g_listen_fd = net_bind("0.0.0.0", 3210, SOCK_DGRAM);
     if (g_listen_fd < 0) {
         LOGE("无法开始监听：%s\n", strerror(errno));
         exit(0);
@@ -308,7 +308,7 @@ void* client_thread(void* ptr) {
                 
                 sendb = packet_send(c->fd, buf, readb, *g_packet_id);
                 if (sendb < 0) {
-                    LOGW("无法向 %s:%d 发送 %d 字节数据: %s\n", c->host, c->port, buflen, strerror(errno));
+                    LOGW("无法向 %s:%d 发送 %d 字节数据: %s\n", c->host, c->port, readb, strerror(errno));
                 }
                 else if (sendb == 0){ 
                     LOGW("%s:%d 可能断开了连接\n", c->host, c->port);
