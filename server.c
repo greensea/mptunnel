@@ -369,14 +369,14 @@ int main(int argc, char** argv) {
 /**
  * 初始化一个接收器 ev，用来处理收到的数据
  */
-int init_recv_ev(int fd) {
+ev_io* init_recv_ev(int fd) {
     ev_io *watcher = (ev_io*)malloc(sizeof(ev_io));
     memset(watcher, 0x00, sizeof(*watcher));
     
     ev_io_init(watcher, recv_bridge_callback, fd, EV_READ);
     ev_io_start(g_ev_reactor, watcher);
     
-    return 0;
+    return watcher;
 }
 
 

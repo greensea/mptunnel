@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <assert.h>
 #include <ev.h>
 #include "net.h"
 
@@ -162,7 +163,7 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
 /**
  * 初始化一个接收器 ev，用来处理收到的数据
  */
-int init_recv_ev(int fd) {
+ev_io* init_recv_ev(int fd) {
     if (g_ev_reactor == NULL) {
         g_ev_reactor = ev_loop_new(EVFLAG_AUTO);
     }
@@ -173,21 +174,33 @@ int init_recv_ev(int fd) {
     ev_io_init(watcher, recv_remote_callback, fd, EV_READ);
     ev_io_start(g_ev_reactor, watcher);
     
+    return watcher;
+}
+
+
+/**
+ * 删除一个已经初始化好的接收器 ev
+ */
+int destroy_recv_ev(ev_io *watcher) {
+    assert(g_ev_reactor != NULL);
+    
+    ev_io_stop(g_ev_reactor, watcher);
+    free(watcher);
+    
     return 0;
 }
 
 
-
-
-int connect_to_server(struct list_head *list, char* host, int port) {
+connections_t* connect_to_server(char* host, int port) {
     int fd;
+    ev_io *watcher = NULL;
     
     LOGD("正在连接到远程主机 %s:%d\n", host, port);
     
     fd = net_connect(host, port, SOCK_DGRAM);
     if (fd < 0) {
         LOGW("无法连接到远程主机 %s:%d: %s\n", host, port, strerror(errno));
-        return -1;
+        return NULL;
     }
     else {
         LOGI("成功连接到远程主机 %s:%d，fd 是 %d\n", host, port, fd);
@@ -199,11 +212,14 @@ int connect_to_server(struct list_head *list, char* host, int port) {
     c->port = port;
     c->fd = fd;
     
-    list_add_tail(&c->list, list);
     
-    init_recv_ev(c->fd);
+    watcher = init_recv_ev(c->fd);
+    if (watcher == NULL) {
+        LOGE("无法初始化 watcher\n");
+    }
+    c->watcher = watcher;
     
-    return 0;
+    return c;
 }
 
 
@@ -212,6 +228,7 @@ int connect_to_servers(struct list_head *list, char* server_list_path) {
     char line[1024];
     int port;
     FILE* fp;
+    connections_t *conn;
     
     fp = fopen(server_list_path, "r");
     if (fp == NULL) {
@@ -236,13 +253,43 @@ int connect_to_servers(struct list_head *list, char* server_list_path) {
         sscanf(line, "%s %d\n", host, &port);
         
         LOGI("从配置文件中读取到目标服务器：%s:%d\n", host, port);
-        connect_to_server(list, host, port);
+        conn = connect_to_server(host, port);
+        
+        list_add_tail(&conn->list, list);
     }
     
     fclose(fp);
     
     return 0;
 }
+
+
+/**
+ * 重新连接到链表中指定的服务器
+ */
+int reconnect_to_server(connections_t *c) {
+    connections_t* newc = NULL;
+    
+    assert(c != NULL);
+    
+    destroy_recv_ev(c->watcher);
+    close(c->fd);
+    
+    newc = connect_to_server(c->host, c->port);
+    
+    
+    LOGD("重新连接到了 %s:%d，fd 由 %d 替换为 %d\n", c->host, c->port, c->fd, newc->fd);
+    
+    /// host 和 port 是相同的，所以不用复制
+    c->fd = newc->fd;
+    c->watcher = newc->watcher;
+    
+    free(newc->host);
+    free(newc);
+    
+    return 0;
+}
+
 
 
 /**
@@ -308,7 +355,12 @@ void* client_thread(void* ptr) {
                 
                 sendb = packet_send(c->fd, buf, readb, *g_packet_id);
                 if (sendb < 0) {
-                    LOGW("无法向 %s:%d 发送 %d 字节数据: %s\n", c->host, c->port, readb, strerror(errno));
+                    LOGW("无法向 %s:%d 发送 %d 字节数据: %s\n", c->host, c->port, buflen, strerror(errno));
+                    
+                    if (errno == EINVAL) {
+                        LOGD("重新启动到 %s:%d 的连接\n", c->host, c->port);
+                        reconnect_to_server(c);
+                    }
                 }
                 else if (sendb == 0){ 
                     LOGW("%s:%d 可能断开了连接\n", c->host, c->port);
