@@ -30,6 +30,8 @@ static int g_listen_fd;
 
 static int* g_packet_id = NULL;
 
+static struct list_head g_connections = LIST_HEAD_INIT(g_connections);
+
 /**
  * ev 处理线程
  */
@@ -94,6 +96,23 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     if (readb < 0) {
         LOGW("接收数据时出错，远程桥（%d）可能断开了连接：%s\n", w->fd, strerror(errno));
         free(buf);
+        
+        if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
+            struct list_head *pos;
+            connections_t *c;
+            
+            LOGI("尝试重新启动到远程桥(%d)的连接\n", w->fd);
+            
+            list_for_each(pos, &g_connections) {
+                c = list_entry(pos, connections_t, list);
+                if (c->fd == w->fd) {
+                    LOGI("将要重新启动到远程桥 %s:%d 的连接\n", c->host, c->port);
+                    reconnect_to_server(c);
+                    break;
+                }
+            }
+        }
+        
         return;
     }
     else if (readb == 0) {
@@ -310,8 +329,7 @@ void* client_thread(void* ptr) {
     
     
     /// 连接到服务器
-    struct list_head connections = LIST_HEAD_INIT(connections);
-    connect_to_servers(&connections, server_list_path);
+    connect_to_servers(&g_connections, server_list_path);
     
     LOGD("初始化 EV 处理线程\n");
     pthread_t tid;
@@ -344,13 +362,14 @@ void* client_thread(void* ptr) {
             struct list_head *pos;
             connections_t *c;
             
+            
             if (g_packet_id == NULL) {
                 g_packet_id = malloc(sizeof(*g_packet_id));
                 *g_packet_id = 0;
             }
             (*g_packet_id)++;
             
-            list_for_each(pos, &connections) {
+            list_for_each(pos, &g_connections) {
                 c = list_entry(pos, connections_t, list);
                 
                 sendb = packet_send(c->fd, buf, readb, *g_packet_id);
