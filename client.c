@@ -99,15 +99,15 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
         
         if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
             struct list_head *pos;
-            connections_t *c;
+            connections_t *conn;
             
             LOGI("尝试重新启动到远程桥(%d)的连接\n", w->fd);
             
             list_for_each(pos, &g_connections) {
-                c = list_entry(pos, connections_t, list);
-                if (c->fd == w->fd) {
-                    LOGI("将要重新启动到远程桥 %s:%d 的连接\n", c->host, c->port);
-                    reconnect_to_server(c);
+                conn = list_entry(pos, connections_t, list);
+                if (conn->fd == w->fd) {
+                    LOGI("将要重新启动到远程桥 %s:%d 的连接\n", conn->host, conn->port);
+                    reconnect_to_server(conn);
                     break;
                 }
             }
@@ -122,6 +122,16 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     }
     else {
         //LOGD("从远程桥（%d）收取了 %d 字节数据\n", w->fd, readb);
+        struct list_head *pos;
+        connections_t *conn;
+            
+        list_for_each(pos, &g_connections) {
+            conn = list_entry(pos, connections_t, list);
+            if (conn->fd == w->fd) {
+                conn->rc_time = time(NULL);
+                break;
+            }
+        }
     }
     
     packet_t* c;
@@ -230,6 +240,8 @@ connections_t* connect_to_server(char* host, int port) {
     c->host = strdup(host);
     c->port = port;
     c->fd = fd;
+    c->st_time = 0;
+    c->rc_time = 0;
     
     
     watcher = init_recv_ev(c->fd);
@@ -302,6 +314,8 @@ int reconnect_to_server(connections_t *c) {
     /// host 和 port 是相同的，所以不用复制
     c->fd = newc->fd;
     c->watcher = newc->watcher;
+    c->st_time = 0;
+    c->rc_time = 0;
     
     free(newc->host);
     free(newc);
@@ -372,6 +386,21 @@ void* client_thread(void* ptr) {
             list_for_each(pos, &g_connections) {
                 c = list_entry(pos, connections_t, list);
                 
+                /// 1. 检查连接是否超时
+                /// 1.1 如果最后一次收到服务器包的时间已经初始化，则检查连接是否超时
+                if (c->rc_time != 0 && c->st_time - c->rc_time > CLIENT_BRIDGE_TIMEOUT) {
+                    LOGD("到 %s:%d 的连接在最后一次发包后已经超过 %d 秒没有收到桥端的数据了，认为连接断开，即将重连\n", c->host, c->port, c->st_time - c->rc_time);
+                    reconnect_to_server(c);
+                }
+                c->st_time = time(NULL);
+                
+                /// 1.2 初始化最后一次收到服务器包的时间，以便进行超时判断
+                if (c->rc_time == 0) {
+                    c->rc_time = time(NULL);
+                }
+                
+                
+                /// 2. 发送数据
                 sendb = packet_send(c->fd, buf, readb, *g_packet_id);
                 if (sendb < 0) {
                     LOGW("无法向 %s:%d 发送 %d 字节数据: %s\n", c->host, c->port, buflen, strerror(errno));

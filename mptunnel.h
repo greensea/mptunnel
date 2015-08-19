@@ -8,12 +8,18 @@
 #include <string.h>
 #include <stdint.h>
 
+#include <ev.h>
+
+
 #include "linklist.h"
 #include "rbtree.h"
 
 
 /// 转发时最大的包长度
 #define MAX_PACKET_SIZE 8000
+
+/// 客户端检测的到桥端的连接超时时间
+#define CLIENT_BRIDGE_TIMEOUT   60
 
 
 #define LOG_ERROR 1
@@ -72,6 +78,18 @@ typedef struct received_t {
     struct list_head rlist;
     pthread_mutex_t rlist_mutex;
 } received_t;
+
+
+typedef struct connections_t {
+    struct list_head list;
+    int fd;
+    char* host;
+    int port;
+    ev_io *watcher;
+    int rc_time;    /// 最后一次收到服务器端数据的时间
+    int st_time;    /// 最后一次向服务器发送数据包的时间
+} connections_t;
+
 
 
 packet_t* packet_make(enum packet_type type, const char* buf, int buflen, int);
