@@ -2,7 +2,6 @@
 #define __BUFFER_H__
 
 #include <stdint.h>
-#include <ev.h>
 
 #include "linklist.h"
 
@@ -14,12 +13,5 @@ typedef struct buffers_t {
 } buffers_t;
 
 
-typedef struct connections_t {
-    struct list_head list;
-    int fd;
-    char* host;
-    int port;
-    ev_io *watcher;
-} connections_t;
 
 #endif
