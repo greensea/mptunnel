@@ -405,7 +405,7 @@ void* client_thread(void* ptr) {
                 if (sendb < 0) {
                     LOGW("无法向 %s:%d 发送 %d 字节数据: %s\n", c->host, c->port, buflen, strerror(errno));
                     
-                    if (errno == EINVAL) {
+                    if (errno == EINVAL || errno == ECONNREFUSED) {
                         LOGD("重新启动到 %s:%d 的连接\n", c->host, c->port);
                         reconnect_to_server(c);
                     }
