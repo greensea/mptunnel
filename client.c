@@ -32,6 +32,8 @@ static int* g_packet_id = NULL;
 
 static struct list_head g_connections = LIST_HEAD_INIT(g_connections);
 
+extern int g_config_encrypt;
+
 /**
  * ev 处理线程
  */
@@ -49,8 +51,24 @@ void* ev_thread(void* ptr) {
 int main(int argc, char** argv) {
     if (argc <= 1) {
         fprintf(stderr, "Usage: <%s> <config_file>\n", argv[0]);
+        fprintf(stderr, "To disable encryption, set environment variable MPTUNNEL_ENCRYPT=0\n");
         exit(-1);
     }
+    
+            
+    if (getenv("MPTUNNEL_ENCRYPT") == NULL) {
+        g_config_encrypt = 1;
+    }
+    else if(atoi(getenv("MPTUNNEL_ENCRYPT")) == 0) {
+        g_config_encrypt = 0;
+    }
+    else {
+        g_config_encrypt = 1;
+    }
+    
+    
+    LOGD("Configuration: Encryption %s\n", (g_config_encrypt) ? "enabled" : "disabled");
+
     
     
     g_listen_fd = net_bind("0.0.0.0", 3000, SOCK_DGRAM);

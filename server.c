@@ -43,6 +43,8 @@ static int g_listen_port = 0;
 static char *g_target_host = NULL;
 static int g_target_port = 0;
 
+extern int g_config_encrypt;
+
 
 
 /**
@@ -338,6 +340,7 @@ int main(int argc, char** argv) {
     
     if (argc <= 3) {
         fprintf(stderr, "Usage: <%s> <listen_port> <target_ip> <target_port>\n", argv[0]);
+        fprintf(stderr, "To disable encryption, set environment variable MPTUNNEL_ENCRYPT=0\n");
         exit(-1);
     }
     else {
@@ -355,6 +358,18 @@ int main(int argc, char** argv) {
             exit(-3);
         }
         
+        if (getenv("MPTUNNEL_ENCRYPT") == NULL) {
+            g_config_encrypt = 1;
+        }
+        else if(atoi(getenv("MPTUNNEL_ENCRYPT")) == 0) {
+            g_config_encrypt = 0;
+        }
+        else {
+            g_config_encrypt = 1;
+        }
+        
+        
+        LOGD("Configuration: Encryption %s\n", (g_config_encrypt) ? "enabled" : "disabled");
         LOGD("配置信息：本地监听端口：%d\n", g_listen_port);
         LOGD("配置信息：目标服务器：%s:%d\n", g_target_host, g_target_port);
     }
