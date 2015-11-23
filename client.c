@@ -374,7 +374,7 @@ void* client_thread(void* ptr) {
         else {
             /// 收到了数据，将数据转发给桥
             struct list_head *pos;
-            connections_t *c;
+            connections_t *c, *c_broken = NULL;
             
             
             if (g_packet_id == NULL) {
@@ -390,7 +390,8 @@ void* client_thread(void* ptr) {
                 /// 1.1 如果最后一次收到服务器包的时间已经初始化，则检查连接是否超时
                 if (c->rc_time != 0 && c->st_time - c->rc_time > CLIENT_BRIDGE_TIMEOUT) {
                     LOGD("到 %s:%d 的连接在最后一次发包后已经超过 %d 秒没有收到桥端的数据了，认为连接断开，即将重连\n", c->host, c->port, c->st_time - c->rc_time);
-                    reconnect_to_server(c);
+                    //reconnect_to_server(c);
+                    c_broken = c;
                 }
                 c->st_time = time(NULL);
                 
@@ -403,20 +404,29 @@ void* client_thread(void* ptr) {
                 /// 2. 发送数据
                 sendb = packet_send(c->fd, buf, readb, *g_packet_id);
                 if (sendb < 0) {
-                    LOGW("无法向 %s:%d 发送 %d 字节数据: %s\n", c->host, c->port, buflen, strerror(errno));
+                    LOGW("无法向 %s:%d(%d) 发送 %d 字节数据: %s\n", c->host, c->port, c->fd, buflen, strerror(errno));
                     
                     if (errno == EINVAL || errno == ECONNREFUSED) {
-                        LOGD("重新启动到 %s:%d 的连接\n", c->host, c->port);
-                        reconnect_to_server(c);
+                        LOGD("重新启动到 %s:%d 的连接(err: %s)\n", c->host, c->port, strerror(errno));
+                        //reconnect_to_server(c);
+                        c_broken = c;
                     }
                 }
                 else if (sendb == 0){ 
-                    LOGW("%s:%d 可能断开了连接\n", c->host, c->port);
+                    LOGW("%s:%d(%d) 可能断开了连接\n", c->host, c->port, c->fd);
                 }
                 else {
                     //LOGD("向 %s:%d 发送了 %d 字节消息“%s”\n", c->host, c->port, sendb, buf);
-                    LOGD("向 %s:%d 发送了 %d 字节消息\n", c->host, c->port, sendb);
+                    LOGD("向 %s:%d(%d) 发送了 %d 字节消息\n", c->host, c->port, c->fd, sendb);
                 }
+            }
+            
+            
+            /// 检查是否有失效的连接
+            if (c_broken != NULL) {
+                LOGI("发现到 %s:%d 的连接中断了，进行重连操作", c->host, c->port);
+                LOGD("不会在该线程中进行重连操作");
+                //reconnect_to_server(c_broken);
             }
         }
     }
