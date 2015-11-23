@@ -13,6 +13,13 @@
 
 //static int* g_received_id = NULL;
 
+
+/**
+ * Enable or disable encryption. default = 1 (encrypt)
+ */
+int g_config_encrypt = 1;
+
+
 /**
  * 已经收到的包的红黑树根
  */
@@ -378,10 +385,15 @@ void decrypt(char* _buf, int _size, uint32_t* iv) {
  * 对一个完整的 mptunnel 数据包进行加密和解密
  */
 void mpdecrypt(char* _buf) {
-    /// 首先解密 packet_t
     packet_t *p = (packet_t*)_buf;
     uint32_t iv;
     
+    if (g_config_encrypt == 0) {
+        return;
+    }
+    
+    
+    /// 首先解密 packet_t
     iv = p->iv;
     
     decrypt(_buf + sizeof(p->iv), sizeof(packet_t) - sizeof(p->iv), &iv);
@@ -393,6 +405,11 @@ void mpdecrypt(char* _buf) {
 void mpencrypt(char* _buf, int _buflen) {
     packet_t *p = (packet_t*)_buf;
     uint32_t iv;
+    
+    if (g_config_encrypt == 0) {
+        return;
+    }
+    
 
     iv = rand();
     p->iv = iv;

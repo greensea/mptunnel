@@ -23,6 +23,11 @@
 
 #define UDP_KEEP_ALIVE 300
 
+/**
+ * 一个 UDP 连接上，最后收到包的时间与最后发送包的时间的最大时间差
+ */
+#define UDP_INTERACTIVE_TIMEOUT 60
+
 
 static struct ev_loop * g_ev_reactor = NULL;
 
@@ -37,6 +42,8 @@ static int g_target_fd = -1;
 static int g_listen_port = 0;
 static char *g_target_host = NULL;
 static int g_target_port = 0;
+
+extern int g_config_encrypt;
 
 
 
@@ -60,6 +67,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     bridge_t* b = (bridge_t*)malloc(sizeof(bridge_t));
     memset(b, 0x00, sizeof(*b));
+    b->st_time = time(NULL);
     b->addrlen = sizeof(b->addr);
     baddr = (struct sockaddr_in*)&b->addr;
     
@@ -229,18 +237,31 @@ int send_to_servers(char* buf, int buflen) {
     
     int ts = time(NULL);
     bridge_t *b;
-    struct list_head *l;
+    struct list_head *l, *tmp;
     
-    list_for_each(l, &g_bridge_list) {
+    list_for_each_safe(l, tmp, &g_bridge_list) {
         b = list_entry(l, bridge_t, list);
         baddr = (struct sockaddr_in*)&b->addr;
         
+        /// 1. 检查连接是否超时
         if (ts - b->rc_time > UDP_KEEP_ALIVE) {
-            //LOGD("桥（%s:%u）空闲了 %d 秒，认为此桥已经断开，不向其转发数据包 %d\n", ipstr, ntohs(baddr->sin_port), ts - b->rc_time, p->id);
-            /// TODO: 删除此桥节点
+            LOGD("桥（%s:%u）空闲了 %d 秒，认为此桥已经断开，不向其转发数据包 %d\n", ipstr, ntohs(baddr->sin_port), ts - b->rc_time, p->id);
+            list_del(l);
+            free(l);
             continue;
         }
         
+        if (abs(b->rc_time - b->st_time) > UDP_INTERACTIVE_TIMEOUT) {
+            LOGD("桥（%s:%u）最后发包与收包时间之差超过了 %d 秒（实际：%d），认为此桥已经断开，不向其转发数据包 %d\n", ipstr, ntohs(baddr->sin_port), UDP_INTERACTIVE_TIMEOUT, b->rc_time - b->st_time, p->id);
+            list_del(l);
+            free(l);
+            continue;
+        }
+        
+        b->st_time = time(NULL);
+        
+        
+        /// 2. 发送数据包
         sendb = sendto(g_listen_fd, p, buflen + sizeof(*p), 0, &b->addr, b->addrlen);
         if (sendb < 0) {
             LOGW("无法向桥(%s:%d)发送 %d 字节数据，包编号 %d: %s\n", ipstr, ntohs(baddr->sin_port), buflen, rawp.id, strerror(errno));
@@ -319,6 +340,7 @@ int main(int argc, char** argv) {
     
     if (argc <= 3) {
         fprintf(stderr, "Usage: <%s> <listen_port> <target_ip> <target_port>\n", argv[0]);
+        fprintf(stderr, "To disable encryption, set environment variable MPTUNNEL_ENCRYPT=0\n");
         exit(-1);
     }
     else {
@@ -336,6 +358,18 @@ int main(int argc, char** argv) {
             exit(-3);
         }
         
+        if (getenv("MPTUNNEL_ENCRYPT") == NULL) {
+            g_config_encrypt = 1;
+        }
+        else if(atoi(getenv("MPTUNNEL_ENCRYPT")) == 0) {
+            g_config_encrypt = 0;
+        }
+        else {
+            g_config_encrypt = 1;
+        }
+        
+        
+        LOGD("Configuration: Encryption %s\n", (g_config_encrypt) ? "enabled" : "disabled");
         LOGD("配置信息：本地监听端口：%d\n", g_listen_port);
         LOGD("配置信息：目标服务器：%s:%d\n", g_target_host, g_target_port);
     }
