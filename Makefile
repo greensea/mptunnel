@@ -1,15 +1,15 @@
 CC = gcc
 CFLAGS = -g -Wall -I/usr/include/libev
-LDFLAGS = -g  -lev -lpthread
+LDFLAGS = -g  -lev -pthread
 
 all: mpclient mpserver
 
 
 mpclient: client.o net.o mptunnel.o rbtree.o
-	$(CC) $(LDFLAGS) $^  -o mpclient
+	$(CC) $^  -o mpclient $(LDFLAGS)
 
 mpserver: server.c mptunnel.o net.o rbtree.o
-	$(CC) $(LDFLAGS) $^  -o mpserver
+	$(CC) $^  -o mpserver $(LDFLAGS)
 
 
 SOURCE = $(wildcard *.c)
