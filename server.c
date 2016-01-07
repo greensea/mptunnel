@@ -108,6 +108,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         
         if (exists != 1) {
             /// 这是一个新客户端，将其添加到客户端列表中
+            LOGI("来了一个新客户端，将其添加到客户端列表中\n");
             list_add(&b->list, &g_bridge_list);
         }
 
