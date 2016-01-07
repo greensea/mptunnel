@@ -57,7 +57,7 @@ int net_bind(const char* bind_ip, int port, int type) {
 
     ret = bind( fd, (struct sockaddr *) &server_addr, sizeof( server_addr ) );
     if (ret < 0) {
-        LOGW("bind 失败(fd = %d)：%s\n", fd, strerror(errno));
+        LOGW("bind 失败(fd = %d, port=%d)：%s\n", fd, port, strerror(errno));
         close(fd);
         return ret;
     }

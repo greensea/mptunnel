@@ -55,11 +55,12 @@ int packet_free(packet_t* p) {
     
 int packet_send(int fd, char* buf, int buflen, int id) {
     int sendb;
-        packet_t* p = packet_make(PKT_TYPE_DATA, buf, buflen, id);
+    packet_t* p = packet_make(PKT_TYPE_DATA, buf, buflen, id);
 
+    errno = 0;
     sendb = send(fd, p, sizeof(*p) + buflen, MSG_DONTWAIT);
     if (sendb < 0) {
-        LOGW("无法向发送 %d 字节数据: %s\n",  buflen, strerror(errno));
+        LOGW("无法向 %d 发送 %d 字节数据: %s\n", fd, buflen, strerror(errno));
     }
     else if (sendb == 0){ 
         LOGW("fd=%d 可能断开了连接\n", fd);

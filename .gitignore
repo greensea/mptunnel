@@ -32,3 +32,5 @@ client.conf
 server.conf
 
 callgrind*
+*valgrind*
+*core*
