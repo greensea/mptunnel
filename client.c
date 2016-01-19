@@ -32,7 +32,21 @@ static int* g_packet_id = NULL;
 
 static struct list_head g_connections = LIST_HEAD_INIT(g_connections);
 
+static struct {
+    ev_async w;
+    int fd;
+} ev_async_reset_conn;
+
 extern int g_config_encrypt;
+
+
+
+/**
+ * 用于保护 ev_io 的锁
+ * 在调用 reconnect_to_server 时，我们需要销毁旧的 ev_io，但此时对应的 ev_io 可能正在其回调处理函数(recv_remote_callback)中，
+ * 如果这时候 free 掉 ev_io，就会出现内存访问错误，因此，我们使用此锁来保护，不要在 recv_remote_callback 正在执行的时候删除 ev_io
+ */
+static pthread_mutex_t g_ev_io_w_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * ev 处理线程
@@ -97,6 +111,7 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     char* buf;
     int buflen = 65536;
     int readb;
+    connections_t *conn = NULL;
     
     buf = malloc(buflen);
     //memset(buf, 0x00, buflen);    /// 为了提升效率，不再初始化接收缓存
@@ -109,17 +124,20 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
         received_init(received);
     }
     
+    pthread_mutex_lock(&g_ev_io_w_mutex);
     
-    readb = recv(w->fd, buf, buflen, 0);
+    
+    readb = recv(w->fd, buf, buflen, MSG_DONTWAIT);
     if (readb < 0) {
-        LOGW("接收数据时出错，远程桥（%d）可能断开了连接：%s\n", w->fd, strerror(errno));
+        LOGW("接收数据时出错，远程桥（%d）可能断开了连接(errno=%d)：%s\n", w->fd, errno, strerror(errno));
         free(buf);
         
-        if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
+        /// 实验性修改：EWOULDBLOCK 也断开，因为长期没有收到数据包时，我们需要主动断开链接，这时另一个线程会给这个回调喂一个事件，但此时系统认为连接还是正常的，所以会返回 EWOULDBLOCK
+        //if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
+        if (errno != EINTR) {
             struct list_head *pos;
-            connections_t *conn;
             
-            LOGI("尝试重新启动到远程桥(%d)的连接\n", w->fd);
+            LOGI("尝试重新启动到远程桥(%d)的连接, errno=%d: %s\n", w->fd, errno, strerror(errno));
             
             list_for_each(pos, &g_connections) {
                 conn = list_entry(pos, connections_t, list);
@@ -131,17 +149,17 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
             }
         }
         
-        return;
+        goto cleanup_return;
     }
     else if (readb == 0) {
-        LOGW("无法从远程桥（%d）接收数据，远程桥可能已经断开了连接\n", w->fd);
+        LOGW("无法从远程桥（%d）接收数据(readb=0)，远程桥可能已经断开了连接: %s\n", w->fd, strerror(errno));
         free(buf);
-        return;
+        goto cleanup_return;
     }
     else {
         //LOGD("从远程桥（%d）收取了 %d 字节数据\n", w->fd, readb);
         struct list_head *pos;
-        connections_t *conn;
+        
             
         list_for_each(pos, &g_connections) {
             conn = list_entry(pos, connections_t, list);
@@ -161,14 +179,19 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     
     if (c->type == PKT_TYPE_CTL) {
-        LOGD("收到控制包数据，丢弃，数据包编号为 %d\n", c->id);
+        LOGD("收到来自 %s:%d 的控制类型数据包(fd=%d)，丢弃，数据包编号为 %d\n", conn->host, conn->port, w->fd, c->id);
         free(c);
-        return;
+        goto cleanup_return;
+    }
+    else if (c->type == PKT_TYPE_NONE) {
+        LOGD("收到来自 %s:%d 的无类型数据包，这应该是网络出现了问题(fd=%d)，丢弃，数据包编号为 %d\n", conn->host, conn->port, w->fd, c->id);
+        free(c);
+        goto cleanup_return;
     }
     else if (c->type != PKT_TYPE_DATA) {
         LOGE("数据包类型错误, type=%d, id=%d\n", c->type, c->id);
         free(c);
-        return;
+        goto cleanup_return;
     }
     
     
@@ -176,13 +199,13 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     /// 简单地丢弃已经收过的包
     if (received_is_received(received, c->id) != 0) {
         /// 已经收过包了
-        LOGD("从远程桥（%d）收到长度为 %d 的曾经收取过的编号为 %d 的包，丢弃之\n", w->fd, c->buflen, c->id);
+        LOGD("从远程桥 %s:%d （fd=%d）收到长度为 %d 的曾经收取过的编号为 %d 的包，丢弃之\n", conn->host, conn->port, w->fd, c->buflen, c->id);
         free(c);
-        return;
+        goto cleanup_return;
     }
     else {
         received_add(received, c->id);
-        LOGD("从远程桥（%d）收到 %d 字节的数据包，包编号 %d，原始包长度 %d, 载荷长度 %d\n", w->fd, c->buflen, c->id, readb, c->buflen);
+        LOGD("从远程桥 %s:%d （fd=%d）收到 %d 字节的数据包，包编号 %d，原始包长度 %d, 载荷长度 %d\n", conn->host, conn->port, w->fd, c->buflen, c->id, readb, c->buflen);
     }
     
     received_try_dropdead(received, 30);
@@ -203,8 +226,22 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     }
     
     free(c);
+    
+cleanup_return:
+    pthread_mutex_unlock(&g_ev_io_w_mutex);
+    
     return;
 }
+
+
+/**
+ * 用于异线程发送 EV 事件，通知 client_thread 有 fd 事件（连接断开）发生的函数
+ */
+void restart_conn_signal(struct ev_loop *reactor, ev_async *w, int events) {
+    ev_feed_fd_event(g_ev_reactor, ev_async_reset_conn.fd, EV_READ);
+}
+
+
 
 
 /**
@@ -221,6 +258,9 @@ ev_io* init_recv_ev(int fd) {
     ev_io_init(watcher, recv_remote_callback, fd, EV_READ);
     ev_io_start(g_ev_reactor, watcher);
     
+    ev_async_init(&ev_async_reset_conn.w, restart_conn_signal);
+    ev_async_start(g_ev_reactor, &ev_async_reset_conn.w);
+    
     return watcher;
 }
 
@@ -232,7 +272,7 @@ int destroy_recv_ev(ev_io *watcher) {
     assert(g_ev_reactor != NULL);
     
     ev_io_stop(g_ev_reactor, watcher);
-    free(watcher);
+    //free(watcher);
     
     return 0;
 }
@@ -422,10 +462,10 @@ void* client_thread(void* ptr) {
                 /// 2. 发送数据
                 sendb = packet_send(c->fd, buf, readb, *g_packet_id);
                 if (sendb < 0) {
-                    LOGW("无法向 %s:%d(%d) 发送 %d 字节数据: %s\n", c->host, c->port, c->fd, buflen, strerror(errno));
+                    LOGW("无法向 %s:%d(%d) 发送 %d 字节数据: %s\n", c->host, c->port, c->fd, readb, strerror(errno));
                     
                     if (errno == EINVAL || errno == ECONNREFUSED) {
-                        LOGD("重新启动到 %s:%d 的连接(err: %s)\n", c->host, c->port, strerror(errno));
+                        LOGD("将重新启动到 %s:%d 的连接(err: %s)\n", c->host, c->port, strerror(errno));
                         //reconnect_to_server(c);
                         c_broken = c;
                     }
@@ -442,9 +482,12 @@ void* client_thread(void* ptr) {
             
             /// 检查是否有失效的连接
             if (c_broken != NULL) {
-                LOGI("发现到 %s:%d 的连接中断了，进行重连操作", c->host, c->port);
-                LOGD("不会在该线程中进行重连操作");
-                //reconnect_to_server(c_broken);
+                LOGI("发现到 %s:%d 的连接中断了，进行重连操作\n", c->host, c->port);
+              //LOGD("不会在该线程中进行重连操作, 才怪，不在这里重连的话似乎一直不会重连");
+              LOGD("不会在该线程(%s)中进行重连操作，但会调用 ev_async_send(c->fd=%d) 以便通知另一线程调用 ev_feed_fd_event，以执行此操作\n", __FUNCTION__, c->fd);
+              ev_async_reset_conn.fd = c->fd;
+              ev_async_send(g_ev_reactor, &ev_async_reset_conn.w);
+              //reconnect_to_server(c_broken);
             }
         }
     }
