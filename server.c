@@ -54,7 +54,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     char* buf;
     int buflen = 65536;
     int readb;
-    struct sockaddr_in *baddr;
+    struct sockaddr_in baddr;
     
     static received_t *received = NULL;
     if (received == NULL) {
@@ -69,7 +69,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     memset(b, 0x00, sizeof(*b));
     b->st_time = time(NULL);
     b->addrlen = sizeof(b->addr);
-    baddr = (struct sockaddr_in*)&b->addr;
+    baddr = *(struct sockaddr_in*)&b->addr;
     
     //LOGD("收到从桥端（fd=%d）发来的数据\n", w->fd);
     
@@ -85,7 +85,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         return;
     }
     else {
-        //LOGD("从桥端(:%u)收取了 %d 字节数据：%s\n", htons(baddr->sin_port), readb, (char*)buf + sizeof(packet_t));
+        //LOGD("从桥端(:%u)收取了 %d 字节数据：%s\n", htons(baddr.sin_port), readb, (char*)buf + sizeof(packet_t));
         
         int exists = 0;
         bridge_t *lb;
@@ -122,24 +122,24 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     p = (packet_t*)buf;
     
     if (p->type == PKT_TYPE_CTL) {
-        LOGD("从桥端(:%u)收取了 %d 字节数据编号为 %d 的数据包，但这是一个控制包，丢弃之\n", htons(baddr->sin_port), readb, p->id);
+        LOGD("从桥端(:%u)收取了 %d 字节数据编号为 %d 的数据包，但这是一个控制包，丢弃之\n", htons(baddr.sin_port), readb, p->id);
         free(buf);
         return;
     }
     else if (p->type != PKT_TYPE_DATA) {
-        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，但这是一个未知类型的数据包，丢弃之\n", htons(baddr->sin_port), readb, p->id);
+        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，但这是一个未知类型的数据包，丢弃之\n", htons(baddr.sin_port), readb, p->id);
         free(buf);
         return;
     }
     else {
-        //LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包\n", htons(baddr->sin_port), readb, p->id);
+        //LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包\n", htons(baddr.sin_port), readb, p->id);
     }
     
     buflen = p->buflen;
     buf = (char*)buf + sizeof(*p);
     
     if (received_is_received(received, p->id) == 1) {
-        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的曾经收取过的数据包，丢弃之\n", htons(baddr->sin_port), readb, p->id);
+        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的曾经收取过的数据包，丢弃之\n", htons(baddr.sin_port), readb, p->id);
         free(p);
         
         //received_destroy(received);
@@ -149,7 +149,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         return;
     }
     else {
-        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，转发该包\n", htons(baddr->sin_port), readb, p->id);
+        LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，转发该包\n", htons(baddr.sin_port), readb, p->id);
         received_add(received, p->id);
     }
     
