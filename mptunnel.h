@@ -52,6 +52,7 @@
 
 
 enum packet_type {
+    PKT_TYPE_NONE,
     PKT_TYPE_CTL,
     PKT_TYPE_DATA
 };
