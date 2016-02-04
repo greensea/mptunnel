@@ -113,10 +113,22 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     int readb;
     connections_t *conn = NULL;
     
+    
     buf = malloc(buflen);
     //memset(buf, 0x00, buflen);    /// 为了提升效率，不再初始化接收缓存
     
-    //LOGD("收到从 %d 发来的数据\n", w->fd);
+    /// 查找对应的连接对象
+    struct list_head *pos;
+    list_for_each(pos, &g_connections) {
+        conn = list_entry(pos, connections_t, list);
+        if (conn->fd == w->fd) {
+            break;
+        }
+    }
+    if (conn == NULL) {
+        LOGE("连接对象列表中没有找到 fd=%d 的连接\n", w->fd);
+    }
+    
     
     static received_t *received = NULL;
     if (received == NULL) {
@@ -129,15 +141,21 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     readb = recv(w->fd, buf, buflen, MSG_DONTWAIT);
     if (readb < 0) {
-        LOGW("接收数据时出错，远程桥（%d）可能断开了连接(errno=%d)：%s\n", w->fd, errno, strerror(errno));
+        LOGW("接收数据时出错，远程桥 %s:%d （fd=%d）可能断开了连接(errno=%d)：%s\n", conn->host, conn->port, w->fd, errno, strerror(errno));
         free(buf);
         
         /// 实验性修改：EWOULDBLOCK 也断开，因为长期没有收到数据包时，我们需要主动断开链接，这时另一个线程会给这个回调喂一个事件，但此时系统认为连接还是正常的，所以会返回 EWOULDBLOCK
-        //if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
+        //if ((errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) || conn->broken == 1) {
         if (errno != EINTR) {
             struct list_head *pos;
             
-            LOGI("尝试重新启动到远程桥(%d)的连接, errno=%d: %s\n", w->fd, errno, strerror(errno));
+            /// 仅当链接断开的时候才会发生 EWOULDBLOCK 事件
+            if ((errno == EWOULDBLOCK || errno == EAGAIN) && conn->broken == 1) {
+                LOGI("因为连接被标记为断开的，尝试重新启动到远程桥 %s:%d (fd=%d)的连接, errno=%d: %s\n", conn->host, conn->port, w->fd, errno, strerror(errno));
+            }
+            else {
+                LOGI("因为网络中断，尝试重新启动到远程桥 %s:%d (fd=%d)的连接, errno=%d: %s\n", conn->host, conn->port, w->fd, errno, strerror(errno));
+            }
             
             list_for_each(pos, &g_connections) {
                 conn = list_entry(pos, connections_t, list);
@@ -300,7 +318,7 @@ connections_t* connect_to_server(char* host, int port) {
     c->fd = fd;
     c->st_time = 0;
     c->rc_time = 0;
-    
+    c->broken = 0;
     
     watcher = init_recv_ev(c->fd);
     if (watcher == NULL) {
@@ -374,6 +392,7 @@ int reconnect_to_server(connections_t *c) {
     c->watcher = newc->watcher;
     c->st_time = 0;
     c->rc_time = 0;
+    c->broken = 0;
     
     free(newc->host);
     free(newc);
@@ -482,10 +501,11 @@ void* client_thread(void* ptr) {
             
             /// 检查是否有失效的连接
             if (c_broken != NULL) {
-                LOGI("发现到 %s:%d 的连接中断了，进行重连操作\n", c->host, c->port);
+                LOGI("发现到 %s:%d 的连接中断了，进行重连操作\n", c_broken->host, c_broken->port);
               //LOGD("不会在该线程中进行重连操作, 才怪，不在这里重连的话似乎一直不会重连");
-              LOGD("不会在该线程(%s)中进行重连操作，但会调用 ev_async_send(c->fd=%d) 以便通知另一线程调用 ev_feed_fd_event，以执行此操作\n", __FUNCTION__, c->fd);
-              ev_async_reset_conn.fd = c->fd;
+              LOGD("不会在该线程(%s)中进行重连操作，但会调用 ev_async_send(c->fd=%d) 以便通知另一线程调用 ev_feed_fd_event，以执行此操作\n", __FUNCTION__, c_broken->fd);
+              c_broken->broken = 1;
+              ev_async_reset_conn.fd = c_broken->fd;
               ev_async_send(g_ev_reactor, &ev_async_reset_conn.w);
               //reconnect_to_server(c_broken);
             }

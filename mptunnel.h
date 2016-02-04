@@ -89,6 +89,7 @@ typedef struct connections_t {
     ev_io *watcher;
     int rc_time;    /// 最后一次收到服务器端数据的时间
     int st_time;    /// 最后一次向服务器发送数据包的时间
+    unsigned char broken;   /// 连接是否已经中断并需要重连，该记号由人工进行标记
 } connections_t;
 
 
