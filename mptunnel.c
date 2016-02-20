@@ -392,6 +392,7 @@ void mpdecrypt(char* _buf) {
         return;
     }
     
+    /// FIXME: 由于数据通过 UDP 协议传输，故此处的 p->buflen 不可信，应该同时传入 buflen 并做校验，以防止内存错误
     
     /// 首先解密 packet_t
     iv = p->iv;
