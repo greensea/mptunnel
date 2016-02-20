@@ -217,7 +217,7 @@ int send_to_servers(char* buf, int buflen) {
         int ret = 0;
         int split = buflen / 2;
         
-        LOGI("要发送的数据大小为 %d 字节，超过最大包大小，将该包拆分为两个小包后再尝试发送\n", buflen, MAX_PACKET_SIZE);
+        LOGI("要发送的数据大小为 %d 字节，超过最大包大小(%d 字节)，将该包拆分为两个小包后再尝试发送\n", buflen, MAX_PACKET_SIZE);
         
         ret += send_to_servers(buf, split);
         ret += send_to_servers(buf + split, buflen - split);
