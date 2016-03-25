@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -g -Wall -I/usr/include/libev
-LDFLAGS = -g  -lev -pthread
+CFLAGS = -g -Wall -I/usr/include/libev -O2
+LDFLAGS = -g  -lev -pthread -O2
 
 all: mpclient mpserver
 
