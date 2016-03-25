@@ -71,8 +71,10 @@ socat udp-listen:4000 udp4:1.1.1.1:2000
 ## 已知问题
 
 * mptunnel 会在转发的数据包中添加一些控制和包同步信息。如果 mpclient 或者 mpserver 其中的一个被停止了，那么必须重新启动 mpserver 和 mpclient 才能重建 MPUDP 隧道。
+
 * 目前 mptunnel 只支持指定一个目标服务器。事实上我觉得将 mpclient 做成 SOCKS 代理的话会更好用，但是我找了很久也没发现好用的 C 语言的 SOCKS 库，自己实现一个又太麻烦了。有谁知道有什么好用的 SOCKS 库吗？
 
+* mptunnel 自带数据加密功能，但加密速度较慢，在一台 AMD Athlon II P320 CPU 机器上实测，在 3 通道的情况下，实际数据流量仅为 3Mbps。如果你不需要 mptunnel 对数据进行加密，可以设定环境变量 MPTUNNEL_ENCRYPT=0 以禁用 mptunnel 自带的加密功能。在禁用加密功能后，吞吐量从 3Mbps 提高到了 300Mbps。
 
 ## 依赖关系
 

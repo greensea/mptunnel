@@ -83,8 +83,10 @@ establish an OpenVPN connection over MultiPath UDP tunnel.
 ## BUGS
 
 * mptunnel add some control information into packets, including synchronous information. mpserver and mpclient must be start at the same time. If mpclient or mpserver terminated, you have to restart both mpserver and mpclient to reestablish the tunnel.
+
 * Currently you can only specify signle target host. Any one knows is there any C library of SOCKS5 proxy? I think making mpclient as a SOCKS proxy server will make it more easy to use.
 
+* mptunnel encrypt packets defaultly, but it will decrease the throughput. I do some tests on my PC with Athlon II P320 Processor, the actual throughput is 3Mbps while using three tunnels, after I disable encryption the throughput increase to 300Mbps. If you dont't like mptunnel to encrypt packets, set environment variable MPTUNNEL_ENCRYPT=0
 
 ## DEPENDENCIES
 
