@@ -365,7 +365,7 @@ received_list_t* received_rbtree_get(struct rb_root* root, int id) {
  * @param int       要加密内容的长度
  * @param uint32_t  初始化向量
  */
-void encrypt(char* _buf, int _size, uint32_t *iv) {
+void encrypt_lfsr(char* _buf, int _size, uint32_t *iv) {
     int i;
     unsigned char *buf = (unsigned char*)_buf;
     unsigned char ivc;
@@ -377,8 +377,8 @@ void encrypt(char* _buf, int _size, uint32_t *iv) {
 }
 
 
-void decrypt(char* _buf, int _size, uint32_t* iv) {
-    encrypt(_buf, _size, iv);
+void decrypt_lfsr(char* _buf, int _size, uint32_t* iv) {
+    encrypt_lfsr(_buf, _size, iv);
 }
 
 /**
@@ -397,10 +397,10 @@ void mpdecrypt(char* _buf) {
     /// 首先解密 packet_t
     iv = p->iv;
     
-    decrypt(_buf + sizeof(p->iv), sizeof(packet_t) - sizeof(p->iv), &iv);
+    decrypt_lfsr(_buf + sizeof(p->iv), sizeof(packet_t) - sizeof(p->iv), &iv);
     
     /// 接着解密内容
-    decrypt(_buf + sizeof(packet_t), p->buflen, &iv);
+    decrypt_lfsr(_buf + sizeof(packet_t), p->buflen, &iv);
 }
 
 void mpencrypt(char* _buf, int _buflen) {
@@ -415,7 +415,7 @@ void mpencrypt(char* _buf, int _buflen) {
     iv = rand();
     p->iv = iv;
     
-    encrypt(_buf + sizeof(p->iv), _buflen - sizeof(p->iv), &iv);
+    encrypt_lfsr(_buf + sizeof(p->iv), _buflen - sizeof(p->iv), &iv);
 }
 
 

@@ -111,8 +111,8 @@ received_list_t* received_rbtree_get(struct rb_root*, int);
 int received_rbtree_add(struct rb_root* , received_list_t*);
 
 
-void encrypt(char* _buf, int _size, uint32_t*);
-void decrypt(char* _buf, int _size, uint32_t*);
+void encrypt_lfsr(char* _buf, int _size, uint32_t*);
+void decrypt_lfsr(char* _buf, int _size, uint32_t*);
 void mpdecrypt(char* _buf);
 void mpencrypt(char* _buf, int _buflen);
 
