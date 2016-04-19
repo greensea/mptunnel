@@ -57,7 +57,7 @@ int net_bind(const char* bind_ip, int port, int type) {
 
     ret = bind( fd, (struct sockaddr *) &server_addr, sizeof( server_addr ) );
     if (ret < 0) {
-        LOGW("bind 失败(fd = %d, port=%d)：%s\n", fd, port, strerror(errno));
+        LOGW(_("bind() failed(fd = %d, port=%d)：%s\n"), fd, port, strerror(errno));
         close(fd);
         return ret;
     }
@@ -65,7 +65,7 @@ int net_bind(const char* bind_ip, int port, int type) {
     if (type == SOCK_STREAM) {
         ret = listen(fd, 1);
         if (ret < 0) {
-            LOGW("listen 失败(fd = %d)：%s\n", fd, strerror(errno));
+            LOGW(_("listen() failed(fd = %d)：%s\n"), fd, strerror(errno));
             close(fd);
             return ret;
         }

@@ -11,9 +11,14 @@
 #include <ev.h>
 
 
+#include <locale.h>
+#include <libintl.h>
+
 #include "linklist.h"
 #include "rbtree.h"
 
+
+#define _(STR) gettext(STR)
 
 /// 转发时最大的包长度
 #define MAX_PACKET_SIZE 8000

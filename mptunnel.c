@@ -60,14 +60,14 @@ int packet_send(int fd, char* buf, int buflen, int id) {
     errno = 0;
     sendb = send(fd, p, sizeof(*p) + buflen, MSG_DONTWAIT);
     if (sendb < 0) {
-        LOGW("无法向 %d 发送 %lu 字节数据: %s\n", fd, sizeof(*p) + buflen, strerror(errno));
+        LOGW(_("Could not send data to %d with %lu bytes: %s\n"), fd, sizeof(*p) + buflen, strerror(errno));
     }
     else if (sendb == 0){ 
-        LOGW("fd=%d 可能断开了连接\n", fd);
+        LOGW("fd=%d may close the connection\n", fd);
     }
     else {
         //LOGD("向 %d 发送了 %d 字节消息“%s”\n", fd, sendb, (char*)(p + 1));
-        LOGD("向 %d 发送了 %d 字节消息，编号为 %d\n", fd, sendb, id);
+        LOGD(_("Sent %d bytes to %d, message id is %d\n"), sendb, fd, id);
     }
     
     packet_free(p);
@@ -147,7 +147,7 @@ int received_list_del(received_t* r, int id) {
         free(c);
     }
     else {
-        LOGW("已经收到的包列表中没有编号为 %d 的包\n", id);
+        LOGW(_("Pakcet #%d is not exists in Received Packet List\n"), id);
     }
     
     pthread_mutex_unlock(&r->rlist_mutex);
@@ -251,7 +251,7 @@ int received_add(received_t* r, int id) {
 int received_try_dropdead(received_t* r, int ttl) {
     long ts = time(NULL);
     if (r->last_dropdead_time + ttl <= ts) {
-        LOGD("进行一次丢包清理，ttl = %d，上次清理时间是 %ld, 当前时间是 %ld, 时间差是 %ld\n", ttl, r->last_dropdead_time, ts, ts - r->last_dropdead_time);
+        LOGD(_("Cleanup timed out packets, TTL=%d, last cleanup time is %ld, current time is %ld, elapsed time is %ld seconds\n"), ttl, r->last_dropdead_time, ts, ts - r->last_dropdead_time);
         r->last_dropdead_time = ts;
     }
     else {
@@ -275,7 +275,8 @@ int received_try_dropdead(received_t* r, int ttl) {
                 /// 丢弃该 id 之前的所有数据包
                 /// 由于这个数据包是列表中最小的数据包，所以不需要清理列表，只需要将 minn 从列表中删除即可
                 
-                LOGD("数据包“%d”收到的时间已经过去了 %ld 秒，认为之前所有的数据包都已经收到了，当前最小已收到连续包 id 是 %d\n", minn->id, time(NULL) - minn->ctime, r->min_con_id);
+                //LOGD("数据包“%d”收到的时间已经过去了 %ld 秒，认为之前所有的数据包都已经收到了，当前最小已收到连续包 id 是 %d\n", minn->id, time(NULL) - minn->ctime, r->min_con_id);
+                LOGD(_("Packet #%d was received and time elapsed %ld seconds, assume packets which ID is smaller than it are all received. The smallest ID of received packet is %d\n"), minn->id, time(NULL) - minn->ctime, r->min_con_id);
                 
                 rb_erase(&minn->rbnode, &g_received_rbtree);
                 r->min_con_id = minn->id;
@@ -295,7 +296,7 @@ int received_try_dropdead(received_t* r, int ttl) {
     
     pthread_mutex_unlock(&r->rlist_mutex);
     
-    LOGD("完成了一次丢包清理，ttl = %d, 当前最小连续收到的包编号是 %d\n", ttl, r->min_con_id);
+    LOGD(_("Finish cleanup timed out packets, TTL = %d, smallest continuous received packet ID is %d\n"), ttl, r->min_con_id);
     
     return 0;
 }
@@ -320,7 +321,7 @@ int received_rbtree_add(struct rb_root* root, received_list_t *node) {
             new = &(*new)->rb_right;
         }
         else {
-            LOGW("编号为 %d 的包已经在已收到的包列表中了\n", cur->id);
+            LOGW(_("Packet #%d is already exists in Packet Received List\n"), cur->id);
             return 0;
         }
     }

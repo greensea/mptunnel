@@ -1,0 +1,431 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-04-19 20:59+0800\n"
+"PO-Revision-Date: 2016-04-19 20:39+0800\n"
+"Last-Translator: greensea <gs@bbxy.net>\n"
+"Language-Team: \n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: client.c:55
+msgid "Starting libev thread\n"
+msgstr "初始化 EV 线程\n"
+
+#: client.c:59 server.c:209
+msgid "libev thread exited\n"
+msgstr "EV 线程退出了\n"
+
+#: client.c:67
+#, c-format
+msgid "Usage: <%s> <config_file>\n"
+msgstr "用法: <%s> <配置文件路径>\n"
+
+#: client.c:68 server.c:361
+#, c-format
+msgid "To disable encryption, set environment variable MPTUNNEL_ENCRYPT=0\n"
+msgstr "如果不想使用加密功能，请设定环境变量 MPTUNNEL_ENCRYPT=0\n"
+
+#: client.c:84 server.c:390
+#, c-format
+msgid "Configuration: Encryption %s\n"
+msgstr "配置选项：加密%s\n"
+
+#: client.c:84 server.c:390
+msgid "enabled"
+msgstr "启用"
+
+#: client.c:84 server.c:390
+msgid "disabled"
+msgstr "禁用"
+
+#: client.c:90
+#, c-format
+msgid "Can't listen on：%s\n"
+msgstr "无法开始监听: %s\n"
+
+#: client.c:93
+msgid "Port listening started\n"
+msgstr "开始端口监听\n"
+
+#: client.c:129
+#, c-format
+msgid "Connection of fd=%d is not exists in Connection List\n"
+msgstr "连接列表中不存在此连接（fd=%d)\n"
+
+#: client.c:145
+#, c-format
+msgid ""
+"Error while receive data, remote bridge %s:%d (fd=%d) may close the "
+"connection(errno=%d): %s\n"
+msgstr "接收数据时出错，远程桥 %s:%d （fd=%d）可能断开了连接(errno=%d)：%s\n"
+
+#: client.c:155
+#, c-format
+msgid ""
+"The connection is marked broken, try restart connection to %s:%d(fd=%d),"
+"errno=%d: %s\n"
+msgstr ""
+"因为连接被标记为断开的，尝试重新启动到远程桥 %s:%d (fd=%d)的连接, errno=%d: "
+"%s\n"
+
+#: client.c:159
+#, c-format
+msgid ""
+"Network broken, try to restart connection to %s:%d(fd=%d), errno=%d: %s\n"
+msgstr "因为网络中断，尝试重新启动到远程桥 %s:%d (fd=%d)的连接, errno=%d: %s\n"
+
+#: client.c:178
+#, c-format
+msgid ""
+"Can't received data from remote bridge(%d), remote bridge may close the "
+"connection (readb=0): %s\n"
+msgstr "无法从远程桥（%d）接收数据(readb=0)，远程桥可能已经断开了连接: %s\n"
+
+#: client.c:206
+#, c-format
+msgid "Receive control packet from %s:%d (fd=%d), packet ID is %d, drop it.\n"
+msgstr "收到来自 %s:%d 的控制类型数据包(fd=%d)，丢弃，数据包编号为 %d\n"
+
+#: client.c:212
+#, c-format
+msgid ""
+"Received unknown type packet from %s:%d (fd=%d), may cause by bad network, "
+"packet ID is %d, drop it."
+msgstr ""
+"收到来自 %s:%d 的无类型数据包，这应该是网络出现了问题(fd=%d)，丢弃，数据包编"
+"号为 %d"
+
+#: client.c:217
+#, c-format
+msgid "Invalid packet type, type=%d, id=%d\n"
+msgstr "数据包类型未知, type=%d, id=%d\n"
+
+#: client.c:228
+#, c-format
+msgid ""
+"Received packet from remote bridge %s:%d (fd=%d) of %d bytes, packet ID is "
+"%d, drop it.\n"
+msgstr ""
+"从远程桥 %s:%d （fd=%d）收到长度为 %d 的曾经收取过的编号为 %d 的包，丢弃之\n"
+
+#: client.c:235
+#, c-format
+msgid ""
+"Received packet from remote bridge %s:%d (fd=%d) of %d bytes, packet ID is "
+"%d, raw lenth %d bytes, payload length %d bytes\n"
+msgstr ""
+"从远程桥 %s:%d （fd=%d）收到 %d 字节的数据包，包编号 %d，原始包长度 %d, 载荷"
+"长度 %d\n"
+
+#: client.c:247
+#, c-format
+msgid "Can not forward packet #%d to client: %s\n"
+msgstr "无法向客户端转发编号为 %d 的数据包：%s\n"
+
+#: client.c:251
+#, c-format
+msgid "Client might close the connection, packet #%d can not be forwarded\n"
+msgstr "客户端可能已经断开了连接，无法转发编号为 %d 的数据包\n"
+
+#: client.c:255
+#, c-format
+msgid "Forwarded packet to client(port %u) of %d bytes, ID is %d\n"
+msgstr "向客户端(端口 %u)转发了 %d 字节长度的编号为 %d 的数据包\n"
+
+#: client.c:315
+#, c-format
+msgid "Connection to %s:%d\n"
+msgstr "连接到 %s:%d\n"
+
+#: client.c:319
+#, c-format
+msgid "Can't connect to %s:%d: %s\n"
+msgstr "无法连接到 %s:%d: %s\n"
+
+#: client.c:323
+#, c-format
+msgid "Connected to remote host %s:%d, fd is %d\n"
+msgstr "无法连接到远程主机 %s:%d, fd=%d\n"
+
+#: client.c:337
+msgid "watcher initalize failed\n"
+msgstr "初始化 ev watcher 失败\n"
+
+#: client.c:354
+#, c-format
+msgid "Error while reading configura file `%s‘：%s\n"
+msgstr "无法读取配置文件 `%s': %s\n"
+
+#: client.c:374
+#, c-format
+msgid "Get remote server address %s:%d from configura file\n"
+msgstr "从配置文件中读取到了远程服务器地址 %s:%d\n"
+
+#: client.c:400
+#, c-format
+msgid "Reconnected to %s:%d, fd %d -> %d"
+msgstr "重新连接到 %s:%d, fd 由 %d 更改为 %d"
+
+#: client.c:437 server.c:397
+msgid "Initializing libev thread\n"
+msgstr "初始化 EV 线程\n"
+
+#: client.c:449
+#, c-format
+msgid "Received data from client(:%u), fd=%d\n"
+msgstr "从客户端(:%u)收到数据, fd=%d\n"
+
+#: client.c:455
+#, c-format
+msgid "Client close the connection: %s\n"
+msgstr "客户端断开了连接: %s\n"
+
+#: client.c:460
+msgid "Can't received from client, client close the connection\n"
+msgstr "无法从客户端收取数据，连接已断开\n"
+
+#: client.c:482
+#, c-format
+msgid ""
+"No packet received from %s:%d since last packet sent to it (%d seconds), "
+"assume connection broken, about to reconnect\n"
+msgstr ""
+"到 %s:%d 的连接在最后一次发包后已经超过 %d 秒没有收到桥端的数据了，认为连接断"
+"开，即将重连\n"
+
+#: client.c:498
+#, c-format
+msgid "Error while sending data to %s:%d(%d) with %d bytes: %s\n"
+msgstr "无法向 %s:%d(%d) 发送 %d 字节数据: %s\n"
+
+#: client.c:501
+#, c-format
+msgid "About to reconnect to %s:%d (err: %s)\n"
+msgstr "准备重新连接到 %s:%d (err: %s)\n"
+
+#: client.c:507
+#, c-format
+msgid "%s:%d(%d) may close the connection\n"
+msgstr "%s:%d(fd=%d) 可能断开了连接\n"
+
+#: client.c:511
+#, c-format
+msgid "Packet sent to %s:%d(%d) of %d bytes.\n"
+msgstr "向 %s:%d(fd=%d) 发送了 %d 字节数据\n"
+
+#: client.c:518
+#, c-format
+msgid "Connection to %s:%d is broken, try reconnect\n"
+msgstr "到 %s:%d 的连接断开了，尝试重连\n"
+
+#: client.c:521
+#, c-format
+msgid ""
+"I will not perform reconnect in current thread(%s), I will call "
+"ev_async_send(c->fd=%d) to ask another thread to perform the reconnect\n"
+msgstr ""
+"不会在该线程(%s)中进行重连操作，但会调用 ev_async_send(c->fd=%d) 以便通知另一"
+"线程调用 ev_feed_fd_event，以执行此操作\n"
+
+#: mptunnel.c:63
+#, c-format
+msgid "Could not send data to %d with %lu bytes: %s\n"
+msgstr "无法向 %d 发送 %lu 字节数据: %s\n"
+
+#: mptunnel.c:70
+#, c-format
+msgid "Sent %d bytes to %d, message id is %d\n"
+msgstr "向 %2$d 发送了 %1$d 字节数据，消息编号 %3$d\n"
+
+#: mptunnel.c:150
+#, c-format
+msgid "Pakcet #%d is not exists in Received Packet List\n"
+msgstr "“已收到包列表中”不存在编号为 %d 的数据包\n"
+
+#: mptunnel.c:254
+#, c-format
+msgid ""
+"Cleanup timed out packets, TTL=%d, last cleanup time is %ld, current time is "
+"%ld, elapsed time is %ld seconds\n"
+msgstr ""
+"开始丢包清理，TTL=%d，最后清理时间 %ld, 当前时间 %ld, 距离上次清理已过去 %ld "
+"秒\n"
+
+#: mptunnel.c:279
+#, c-format
+msgid ""
+"Packet #%d was received and time elapsed %ld seconds, assume packets which "
+"ID is smaller than it are all received. The smallest ID of received packet "
+"is %d\n"
+msgstr ""
+"数据包“%d”收到的时间已经过去了 %ld 秒，认为之前所有的数据包都已经收到了，当前"
+"最小已收到连续包 id 是 %d\n"
+
+#: mptunnel.c:299
+#, c-format
+msgid ""
+"Finish cleanup timed out packets, TTL = %d, smallest continuous received "
+"packet ID is %d\n"
+msgstr "丢包清理操作完成，TTL=%d，最小连续收到的包编号为 %d\n"
+
+#: mptunnel.c:324
+#, c-format
+msgid "Packet #%d is already exists in Packet Received List\n"
+msgstr "“已收到包列表”中已经存在编号为 %d 的数据包了\n"
+
+#: net.c:60
+#, c-format
+msgid "bind() failed(fd = %d, port=%d)：%s\n"
+msgstr "bind() 调用失败(fd=%d, port=%d): %s\n"
+
+#: net.c:68
+#, c-format
+msgid "listen() failed(fd = %d)：%s\n"
+msgstr "listen() 调用失败(fd=%d): %s\n"
+
+#: server.c:78
+#, c-format
+msgid "Bridge(fd=%d) may close the connection: %s\n"
+msgstr "远程桥（fd=%d）可能关闭了连接: %s\n"
+
+#: server.c:83
+#, c-format
+msgid ""
+"Can't received packet from bridge（fd=%d），bridge may close the connection\n"
+msgstr "无法从远程桥收取数据（fd=%d），远程桥可能关闭了连接\n"
+
+#: server.c:111
+msgid "Got a new client, add it to Client List\n"
+msgstr "来了一个新客户端，将其添加到客户端列表中\n"
+
+#: server.c:127
+#, c-format
+msgid ""
+"Received control packet from bridge (:%u) of %d bytes, packet ID is %d, drop "
+"it\n"
+msgstr ""
+"从桥端(:%u)收取了 %d 字节数据编号为 %d 的数据包，但这是一个控制包，丢弃之\n"
+
+#: server.c:133
+#, c-format
+msgid ""
+"Received packet from bridge (:%u) of %d bytes, packet ID is %d, but packet "
+"type is unknown, drop it.\n"
+msgstr ""
+"从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，但这是一个未知类型的数据包，丢弃"
+"之\n"
+
+#: server.c:146
+#, c-format
+msgid ""
+"Received packet from bridge (:%u) of %d bytes which was received, packet ID "
+"is %d, drop it\n"
+msgstr "从桥端(:%u)收取了 %d 字节编号为 %d 的曾经收取过的数据包，丢弃之\n"
+
+#: server.c:157
+#, c-format
+msgid "Received packet from bridge (:%u) of %d bytes, ID is %d, forward it\n"
+msgstr "从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，转发该包\n"
+
+#: server.c:172
+#, c-format
+msgid "Can't send packet #%d to target server: %s\n"
+msgstr "无法向目标服务器发送编号为 %d 的数据包：%s\n"
+
+#: server.c:176
+#, c-format
+msgid "Connection to target server seems closed, can't forward packet #%d\n"
+msgstr "目标服务器可能已经断开了连接，无法转发 %d 号数据包\n"
+
+#: server.c:193
+msgid "libev thread started\n"
+msgstr "EV 线程开始执行\n"
+
+#: server.c:197
+#, c-format
+msgid "Can't listen port %d: %s\n"
+msgstr "无法在 %d 端口上进行监听: %s\n"
+
+#: server.c:229
+#, c-format
+msgid ""
+"Packet is %d bytes, which excees max packet size limit (%d bytes), spilt the "
+"packet into two smaller packets before send.\n"
+msgstr ""
+"要发送的数据大小为 %d 字节，超过最大包大小(%d 字节)，将该包拆分为两个小包后再"
+"尝试发送\n"
+
+#: server.c:259
+#, fuzzy, c-format
+msgid ""
+"No packet received from bridge (%s:%u) for %d seconds, assume the connection "
+"is closed, stop forward packet to it %d\n"
+msgstr "桥（%s:%u）空闲了 %d 秒，认为此桥已经断开，不向其转发数据包 %d\n"
+
+#: server.c:267
+#, c-format
+msgid ""
+"The time difference between packet received and packet sent of bridge %s:%u "
+"is larger than %d seconds (Actually %d seconds), assume the connection is "
+"broken, stop forward packet to it %d\n"
+msgstr ""
+"桥（%s:%u）最后发包与收包时间之差超过了 %d 秒（实际：%d），认为此桥已经断开，"
+"不向其转发数据包 %d\n"
+
+#: server.c:280
+#, c-format
+msgid "Can't send packet to bridge(%s:%d) of %d bytes, packet ID is %d: %s\n"
+msgstr "无法向桥(%s:%d)发送 %d 字节数据，包编号 %d: %s\n"
+
+#: server.c:287
+#, c-format
+msgid "Forward packet to bridge(port %u) of %d bytes, packet ID is %d\n"
+msgstr "向桥（端口：%u）发送了 %d 字节数据，包编号 %d\n"
+
+#: server.c:306
+msgid "Thread which forward packet from server to bridge is started\n"
+msgstr "服务器到桥转发线程开始执行\n"
+
+#: server.c:314
+#, c-format
+msgid "Could not connect to target server：%s\n"
+msgstr "无法连接到目标服务器: %s\n"
+
+#: server.c:326
+#, c-format
+msgid "Target server close the connection: %s\n"
+msgstr "目标服务器关闭了连接: %s\n"
+
+#: server.c:332
+msgid "Can't received packet from server, server close the connection\n"
+msgstr "无法从服务器收取数据，服务器关闭了连接\n"
+
+#: server.c:344
+msgid "Thread which forward packet from server to bridge exited\n"
+msgstr "服务器到桥转发线程退出了\n"
+
+#: server.c:360
+#, c-format
+msgid "Usage: <%s> <listen_port> <target_ip> <target_port>\n"
+msgstr "用法: <%s> <监听端口> <目标 IP> <目标端口>\n"
+
+#: server.c:391
+#, c-format
+msgid "Configuration: Local listening port: %d\n"
+msgstr "配置项：本地监听端口：%d\n"
+
+#: server.c:392
+#, c-format
+msgid "Configuration: server：%s:%d\n"
+msgstr "配置项：目标服务器：%s:%d\n"
