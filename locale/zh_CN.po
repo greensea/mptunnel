@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-04-19 21:02+0800\n"
+"POT-Creation-Date: 2016-04-19 21:07+0800\n"
 "PO-Revision-Date: 2016-04-19 21:02+0800\n"
 "Last-Translator: greensea <gs@bbxy.net>\n"
 "Language-Team: \n"
@@ -26,51 +26,51 @@ msgstr "初始化 EV 线程\n"
 msgid "libev thread exited\n"
 msgstr "EV 线程退出了\n"
 
-#: client.c:67
+#: client.c:71
 #, c-format
 msgid "Usage: <%s> <config_file>\n"
 msgstr "用法: <%s> <配置文件路径>\n"
 
-#: client.c:68 server.c:361
+#: client.c:72 server.c:361
 #, c-format
 msgid "To disable encryption, set environment variable MPTUNNEL_ENCRYPT=0\n"
 msgstr "如果不想使用加密功能，请设定环境变量 MPTUNNEL_ENCRYPT=0\n"
 
-#: client.c:84 server.c:390
+#: client.c:88 server.c:390
 #, c-format
 msgid "Configuration: Encryption %s\n"
 msgstr "配置选项：加密%s\n"
 
-#: client.c:84 server.c:390
+#: client.c:88 server.c:390
 msgid "enabled"
 msgstr "启用"
 
-#: client.c:84 server.c:390
+#: client.c:88 server.c:390
 msgid "disabled"
 msgstr "禁用"
 
-#: client.c:90
+#: client.c:94
 #, c-format
 msgid "Can't listen on：%s\n"
 msgstr "无法开始监听: %s\n"
 
-#: client.c:93
+#: client.c:97
 msgid "Port listening started\n"
 msgstr "开始端口监听\n"
 
-#: client.c:129
+#: client.c:133
 #, c-format
 msgid "Connection of fd=%d is not exists in Connection List\n"
 msgstr "连接列表中不存在此连接（fd=%d)\n"
 
-#: client.c:145
+#: client.c:149
 #, c-format
 msgid ""
 "Error while receive data, remote bridge %s:%d (fd=%d) may close the "
 "connection(errno=%d): %s\n"
 msgstr "接收数据时出错，远程桥 %s:%d （fd=%d）可能断开了连接(errno=%d)：%s\n"
 
-#: client.c:155
+#: client.c:159
 #, c-format
 msgid ""
 "The connection is marked broken, try restart connection to %s:%d(fd=%d),"
@@ -79,25 +79,25 @@ msgstr ""
 "因为连接被标记为断开的，尝试重新启动到远程桥 %s:%d (fd=%d)的连接, errno=%d: "
 "%s\n"
 
-#: client.c:159
+#: client.c:163
 #, c-format
 msgid ""
 "Network broken, try to restart connection to %s:%d(fd=%d), errno=%d: %s\n"
 msgstr "因为网络中断，尝试重新启动到远程桥 %s:%d (fd=%d)的连接, errno=%d: %s\n"
 
-#: client.c:178
+#: client.c:182
 #, c-format
 msgid ""
 "Can't received data from remote bridge(%d), remote bridge may close the "
 "connection (readb=0): %s\n"
 msgstr "无法从远程桥（%d）接收数据(readb=0)，远程桥可能已经断开了连接: %s\n"
 
-#: client.c:206
+#: client.c:210
 #, c-format
 msgid "Receive control packet from %s:%d (fd=%d), packet ID is %d, drop it.\n"
 msgstr "收到来自 %s:%d 的控制类型数据包(fd=%d)，丢弃，数据包编号为 %d\n"
 
-#: client.c:212
+#: client.c:216
 #, c-format
 msgid ""
 "Received unknown type packet from %s:%d (fd=%d), may cause by bad network, "
@@ -106,12 +106,12 @@ msgstr ""
 "收到来自 %s:%d 的无类型数据包，这应该是网络出现了问题(fd=%d)，丢弃，数据包编"
 "号为 %d"
 
-#: client.c:217
+#: client.c:221
 #, c-format
 msgid "Invalid packet type, type=%d, id=%d\n"
 msgstr "数据包类型未知, type=%d, id=%d\n"
 
-#: client.c:228
+#: client.c:232
 #, c-format
 msgid ""
 "Received packet from remote bridge %s:%d (fd=%d) of %d bytes, packet ID is "
@@ -119,7 +119,7 @@ msgid ""
 msgstr ""
 "从远程桥 %s:%d （fd=%d）收到长度为 %d 的曾经收取过的编号为 %d 的包，丢弃之\n"
 
-#: client.c:235
+#: client.c:239
 #, c-format
 msgid ""
 "Received packet from remote bridge %s:%d (fd=%d) of %d bytes, packet ID is "
@@ -128,74 +128,74 @@ msgstr ""
 "从远程桥 %s:%d （fd=%d）收到 %d 字节的数据包，包编号 %d，原始包长度 %d, 载荷"
 "长度 %d\n"
 
-#: client.c:247
+#: client.c:251
 #, c-format
 msgid "Can not forward packet #%d to client: %s\n"
 msgstr "无法向客户端转发编号为 %d 的数据包：%s\n"
 
-#: client.c:251
+#: client.c:255
 #, c-format
 msgid "Client might close the connection, packet #%d can not be forwarded\n"
 msgstr "客户端可能已经断开了连接，无法转发编号为 %d 的数据包\n"
 
-#: client.c:255
+#: client.c:259
 #, c-format
 msgid "Forwarded packet to client(port %u) of %d bytes, ID is %d\n"
 msgstr "向客户端(端口 %u)转发了 %d 字节长度的编号为 %d 的数据包\n"
 
-#: client.c:315
+#: client.c:319
 #, c-format
 msgid "Connect to %s:%d\n"
 msgstr "连接到 %s:%d\n"
 
-#: client.c:319
+#: client.c:323
 #, c-format
 msgid "Can't connect to %s:%d: %s\n"
 msgstr "无法连接到 %s:%d: %s\n"
 
-#: client.c:323
+#: client.c:327
 #, c-format
 msgid "Connected to remote host %s:%d, fd is %d\n"
 msgstr "无法连接到远程主机 %s:%d, fd=%d\n"
 
-#: client.c:337
+#: client.c:341
 msgid "watcher initalize failed\n"
 msgstr "初始化 ev watcher 失败\n"
 
-#: client.c:354
+#: client.c:358
 #, c-format
 msgid "Error while reading configura file `%s‘：%s\n"
 msgstr "无法读取配置文件 `%s': %s\n"
 
-#: client.c:374
+#: client.c:378
 #, c-format
 msgid "Get remote server address %s:%d from configura file\n"
 msgstr "从配置文件中读取到了远程服务器地址 %s:%d\n"
 
-#: client.c:400
+#: client.c:404
 #, c-format
 msgid "Reconnected to %s:%d, fd %d -> %d"
 msgstr "重新连接到 %s:%d, fd 由 %d 更改为 %d"
 
-#: client.c:437 server.c:397
+#: client.c:441 server.c:397
 msgid "Initializing libev thread\n"
 msgstr "初始化 EV 线程\n"
 
-#: client.c:449
+#: client.c:453
 #, c-format
 msgid "Received data from client(:%u), fd=%d\n"
 msgstr "从客户端(:%u)收到数据, fd=%d\n"
 
-#: client.c:455
+#: client.c:459
 #, c-format
 msgid "Client close the connection: %s\n"
 msgstr "客户端断开了连接: %s\n"
 
-#: client.c:460
+#: client.c:464
 msgid "Can't received from client, client close the connection\n"
 msgstr "无法从客户端收取数据，连接已断开\n"
 
-#: client.c:482
+#: client.c:486
 #, c-format
 msgid ""
 "No packet received from %s:%d since last packet sent to it (%d seconds), "
@@ -204,32 +204,32 @@ msgstr ""
 "到 %s:%d 的连接在最后一次发包后已经超过 %d 秒没有收到桥端的数据了，认为连接断"
 "开，即将重连\n"
 
-#: client.c:498
+#: client.c:502
 #, c-format
 msgid "Error while sending data to %s:%d(%d) with %d bytes: %s\n"
 msgstr "无法向 %s:%d(%d) 发送 %d 字节数据: %s\n"
 
-#: client.c:501
+#: client.c:505
 #, c-format
 msgid "About to reconnect to %s:%d (err: %s)\n"
 msgstr "准备重新连接到 %s:%d (err: %s)\n"
 
-#: client.c:507
+#: client.c:511
 #, c-format
 msgid "%s:%d(%d) may close the connection\n"
 msgstr "%s:%d(fd=%d) 可能断开了连接\n"
 
-#: client.c:511
+#: client.c:515
 #, c-format
 msgid "Packet sent to %s:%d(%d) of %d bytes.\n"
 msgstr "向 %s:%d(fd=%d) 发送了 %d 字节数据\n"
 
-#: client.c:518
+#: client.c:522
 #, c-format
 msgid "Connection to %s:%d is broken, try reconnect\n"
 msgstr "到 %s:%d 的连接断开了，尝试重连\n"
 
-#: client.c:521
+#: client.c:525
 #, c-format
 msgid ""
 "I will not perform reconnect in current thread(%s), I will call "

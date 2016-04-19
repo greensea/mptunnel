@@ -63,6 +63,10 @@ void* ev_thread(void* ptr) {
 
 
 int main(int argc, char** argv) {
+    setlocale(LC_ALL, "");
+    bindtextdomain("mptunnel", "locale");
+    textdomain("mptunnel");
+    
     if (argc <= 1) {
         fprintf(stderr, _("Usage: <%s> <config_file>\n"), argv[0]);
         fprintf(stderr, _("To disable encryption, set environment variable MPTUNNEL_ENCRYPT=0\n"));
