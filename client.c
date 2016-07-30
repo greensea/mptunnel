@@ -42,15 +42,15 @@ extern int g_config_encrypt;
 
 
 /**
- * 用于保护 ev_io 的锁
- * 在调用 reconnect_to_server 时，我们需要销毁旧的 ev_io，但此时对应的 ev_io 可能正在其回调处理函数(recv_remote_callback)中，
- * 如果这时候 free 掉 ev_io，就会出现内存访问错误，因此，我们使用此锁来保护，不要在 recv_remote_callback 正在执行的时候删除 ev_io
- */
+* For the protection of ev_io lock
+* In call reconnect_to_server, we need to destroy the old ev_io, but in this case the corresponding ev_io may be its callback processing function(recv_remote_callback),
+* If this time free off ev_io, there will be memory access errors, and therefore, we use this lock to protect, not in the recv_remote_callback being executed when the Delete ev_io
+*/
 static pthread_mutex_t g_ev_io_w_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * ev 处理线程
- */
+* ev processing thread
+*/
 void* ev_thread(void* ptr) {
     LOGD(_("Starting libev thread\n"));
     
@@ -109,8 +109,8 @@ int main(int argc, char** argv) {
 
 
 /**
- * 收到远程桥发来的数据时的处理函数
- */
+* Receive remote Bridge is sent to the data processing function
+*/
 void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     char* buf;
     int buflen = 65536;
@@ -119,9 +119,9 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     
     buf = malloc(buflen);
-    //memset(buf, 0x00, buflen);    /// 为了提升效率，不再初始化接收缓存
+    //memset(buf, 0x00, buflen); /// in order to enhance the efficiency, no longer initialize the receive buffer
     
-    /// 查找对应的连接对象
+    /// Find the corresponding connection object
     struct list_head *pos;
     list_for_each(pos, &g_connections) {
         conn = list_entry(pos, connections_t, list);
@@ -149,26 +149,26 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
         LOGW(_("Error while receive data, remote bridge %s:%d (fd=%d) may close the connection(errno=%d): %s\n"), conn->host, conn->port, w->fd, errno, strerror(errno));
         free(buf);
         
-        /// 实验性修改：EWOULDBLOCK 也断开，因为长期没有收到数据包时，我们需要主动断开链接，这时另一个线程会给这个回调喂一个事件，但此时系统认为连接还是正常的，所以会返回 EWOULDBLOCK
+        /// Experimental modifications: EWOULDBLOCK is also turned off, because long-term did not receive a packet, we need to take the initiative to disconnect the link, then another thread will give this a callback feed of an event, but in this case the system considers the connection is still normal, it will return EWOULDBLOCK
         //if ((errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) || conn->broken == 1) {
         if (errno != EINTR) {
             struct list_head *pos;
             
-            /// 仅当链接断开的时候才会发生 EWOULDBLOCK 事件
+            /// Only when the link is disconnected when it will happen EWOULDBLOCK event
             if ((errno == EWOULDBLOCK || errno == EAGAIN) && conn->broken == 1) {
                 LOGI(_("The connection is marked broken, try restart connection to %s:%d(fd=%d),errno=%d: %s\n"), conn->host, conn->port, w->fd, errno, strerror(errno));
-                //LOGI("因为连接被标记为断开的，尝试重新启动到远程桥 %s:%d (fd=%d)的连接, errno=%d: %s\n", conn->host, conn->port, w->fd, errno, strerror(errno));
+                //LOGI("because the connection is marked as disconnected, try to restart to the remote Bridge %s:%d (fd=%d), errno=%d: %s\n", conn->host, conn->port, w->fd, errno, strerror(errno));
             }
             else {
                 LOGI(_("Network broken, try to restart connection to %s:%d(fd=%d), errno=%d: %s\n"), conn->host, conn->port, w->fd, errno, strerror(errno));
-                //LOGI("因为网络中断，尝试重新启动到远程桥 %s:%d (fd=%d)的连接, errno=%d: %s\n", conn->host, conn->port, w->fd, errno, strerror(errno));
+                //LOGI("because the network interruption, try to restart to the remote Bridge %s:%d (fd=%d), errno=%d: %s\n", conn->host, conn->port, w->fd, errno, strerror(errno));
             }
             
             list_for_each(pos, &g_connections) {
                 conn = list_entry(pos, connections_t, list);
                 if (conn->fd == w->fd) {
                     LOGI("About to re-establish connection to %s:%d\n", conn->host, conn->port);
-                    //LOGI("将要重新启动到远程桥 %s:%d 的连接\n", conn->host, conn->port);
+                    //LOGI("will restart to the remote Bridge %s:%d connected\n", conn->host, conn->port);
                     reconnect_to_server(conn);
                     break;
                 }
@@ -178,13 +178,13 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
         goto cleanup_return;
     }
     else if (readb == 0) {
-        //LOGW("无法从远程桥（%d）接收数据(readb=0)，远程桥可能已经断开了连接: %s\n", w->fd, strerror(errno));
+        //LOGW("unable to remote from Bridge%d receive data(readb=0), the remote Bridge may have been disconnected: %s\n", w->fd, strerror(errno));
         LOGW(_("Can't received data from remote bridge(%d), remote bridge may close the connection (readb=0): %s\n"), w->fd, strerror(errno));
         free(buf);
         goto cleanup_return;
     }
     else {
-        //LOGD("从远程桥（%d）收取了 %d 字节数据\n", w->fd, readb);
+        //LOGD("from a remote Bridge%d received %d bytes of data\n", w->fd, readb);
         struct list_head *pos;
         
             
@@ -206,13 +206,13 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     
     if (c->type == PKT_TYPE_CTL) {
-        //LOGD("收到来自 %s:%d 的控制类型数据包(fd=%d)，丢弃，数据包编号为 %d\n", conn->host, conn->port, w->fd, c->id);
+        //LOGD("received from %s:%d the control type data packet(fd=%d), discarding that data packet number is %d\n", conn->host, conn->port, w->fd, c->id);
         LOGD(_("Receive control packet from %s:%d (fd=%d), packet ID is %d, drop it.\n"), conn->host, conn->port, w->fd, c->id);
         free(c);
         goto cleanup_return;
     }
     else if (c->type == PKT_TYPE_NONE) {
-        //LOGD("收到来自 %s:%d 的无类型数据包，这应该是网络出现了问题(fd=%d)，丢弃，数据包编号为 %d\n", conn->host, conn->port, w->fd, c->id);
+        //LOGD("received from %s:%d non-type data packet, which should be a network problem(fd=%d), discarding that data packet number is %d\n", conn->host, conn->port, w->fd, c->id);
         LOGD(_("Received unknown type packet from %s:%d (fd=%d), may cause by bad network, packet ID is %d, drop it."), conn->host, conn->port, w->fd, c->id);
         free(c);
         goto cleanup_return;
@@ -225,17 +225,17 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     
     
-    /// 简单地丢弃已经收过的包
+    /// Simply discard already received packet
     if (received_is_received(received, c->id) != 0) {
-        /// 已经收过包了
-        //LOGD("从远程桥 %s:%d （fd=%d）收到长度为 %d 的曾经收取过的编号为 %d 的包，丢弃之\n", conn->host, conn->port, w->fd, c->buflen, c->id);
+        /// Has been received through the packet.
+        //LOGD("from a remote Bridge %s:%d fd=%d, received length is %d ever charged over the number is %d packet, discarding it\n", conn->host, conn->port, w->fd, c->buflen, c->id);
         LOGD(_("Received packet from remote bridge %s:%d (fd=%d) of %d bytes, packet ID is %d, drop it.\n"), conn->host, conn->port, w->fd, c->buflen, c->id);
         free(c);
         goto cleanup_return;
     }
     else {
         received_add(received, c->id);
-        //LOGD("从远程桥 %s:%d （fd=%d）收到 %d 字节的数据包，包编号 %d，原始包长度 %d, 载荷长度 %d\n", conn->host, conn->port, w->fd, c->buflen, c->id, readb, c->buflen);
+        //LOGD("from a remote Bridge %s:%d fd=%d, received %d bytes of packet, packet number %d, the original packet length %d payload length %d\n", conn->host, conn->port, w->fd, c->buflen, c->id, readb, c->buflen);
         LOGD(_("Received packet from remote bridge %s:%d (fd=%d) of %d bytes, packet ID is %d, raw lenth %d bytes, payload length %d bytes\n"), conn->host, conn->port, w->fd, c->buflen, c->id, readb, c->buflen);
     }
     
@@ -243,19 +243,19 @@ void recv_remote_callback(struct ev_loop* reactor, ev_io* w, int events) {
     
     
     
-    /// 将收到的数据包转发到客户端
+    /// The received data packet is forwarded to the client
     int sendb;
     sendb = sendto(g_listen_fd, buf, c->buflen, MSG_DONTWAIT, &g_client_addr, g_client_addrlen);
     if (sendb < 0) {
-        //LOGW("无法向客户端转发编号为 %d 的数据包：%s\n", c->id, strerror(errno));
+        //LOGW("unable to client forwarding number is %d packet:%s\n", c->id, strerror(errno));
         LOGW(_("Can not forward packet #%d to client: %s\n"), c->id, strerror(errno));
     }
     else if (sendb == 0) {
-        //LOGW("客户端可能已经断开了连接，无法转发编号为 %d 的数据包\n", c->id);
+        //LOGW("the client may have been disconnected, not the forwarding number is %d packet\n", c->id);
         LOGW(_("Client might close the connection, packet #%d can not be forwarded\n"), c->id);
     }
     else {
-        //LOGD("向客户端(端口 %u)转发了 %d 字节长度的编号为 %d 的数据包\n", ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), sendb, c->id);
+        //LOGD("to client(port %u), forwarding %d bytes to the length of the number is %d packet\n", ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), sendb, c->id);
         LOGD(_("Forwarded packet to client(port %u) of %d bytes, ID is %d\n"), ntohs(((struct sockaddr_in*)&g_client_addr)->sin_port), sendb, c->id);
     }
     
@@ -269,8 +269,8 @@ cleanup_return:
 
 
 /**
- * 用于异线程发送 EV 事件，通知 client_thread 有 fd 事件（连接断开）发生的函数
- */
+* For ISO-thread to send an EV event, the notification client_thread have the fd event that disconnect occurs the function
+*/
 void restart_conn_signal(struct ev_loop *reactor, ev_async *w, int events) {
     ev_feed_fd_event(g_ev_reactor, ev_async_reset_conn.fd, EV_READ);
 }
@@ -279,8 +279,8 @@ void restart_conn_signal(struct ev_loop *reactor, ev_async *w, int events) {
 
 
 /**
- * 初始化一个接收器 ev，用来处理收到的数据
- */
+* Initialize a receiver ev, is used to process the received data
+*/
 ev_io* init_recv_ev(int fd) {
     if (g_ev_reactor == NULL) {
         g_ev_reactor = ev_loop_new(EVFLAG_AUTO);
@@ -300,8 +300,8 @@ ev_io* init_recv_ev(int fd) {
 
 
 /**
- * 删除一个已经初始化好的接收器 ev
- */
+* To delete an already initialized the good of the receiver ev
+*/
 int destroy_recv_ev(ev_io *watcher) {
     assert(g_ev_reactor != NULL);
     
@@ -388,8 +388,8 @@ int connect_to_servers(struct list_head *list, char* server_list_path) {
 
 
 /**
- * 重新连接到链表中指定的服务器
- */
+* Re-connection to the list specified in the server
+*/
 int reconnect_to_server(connections_t *c) {
     connections_t* newc = NULL;
     
@@ -403,7 +403,7 @@ int reconnect_to_server(connections_t *c) {
     
     LOGD(_("Reconnected to %s:%d, fd %d -> %d"), c->host, c->port, c->fd, newc->fd);
     
-    /// host 和 port 是相同的，所以不用复制
+    /// host and port are the same, so don't copy
     c->fd = newc->fd;
     c->watcher = newc->watcher;
     c->st_time = 0;
@@ -419,10 +419,10 @@ int reconnect_to_server(connections_t *c) {
 
 
 /**
- * 将本地数据转发到桥的线程
- * 
- * @param void*     目标服务器配置文件路径
- */
+* The local data is forwarded to the bridge thread
+* 
+* @param void* target server configuration file path
+*/
 void* client_thread(void* ptr) {
     int readb, sendb, buflen;
     char* buf;
@@ -435,7 +435,7 @@ void* client_thread(void* ptr) {
     buf = malloc(buflen);
     
     
-    /// 连接到服务器
+    /// Connect to the server
     connect_to_servers(&g_connections, server_list_path);
     
     LOGD(_("Initializing libev thread\n"));
@@ -465,7 +465,7 @@ void* client_thread(void* ptr) {
             break;
         }
         else {
-            /// 收到了数据，将数据转发给桥
+            /// Received a data, the data is forwarded to the bridge
             struct list_head *pos;
             connections_t *c, *c_broken = NULL;
             
@@ -479,26 +479,26 @@ void* client_thread(void* ptr) {
             list_for_each(pos, &g_connections) {
                 c = list_entry(pos, connections_t, list);
                 
-                /// 1. 检查连接是否超时
-                /// 1.1 如果最后一次收到服务器包的时间已经初始化，则检查连接是否超时
+                /// 1. Check whether the connection is timeout
+                /// 1.1 if the last received server time has been initialized, it is checked whether the connection timeout
                 if (c->rc_time != 0 && c->st_time - c->rc_time > CLIENT_BRIDGE_TIMEOUT) {
-                    //LOGD("到 %s:%d 的连接在最后一次发包后已经超过 %d 秒没有收到桥端的数据了，认为连接断开，即将重连\n", c->host, c->port, c->st_time - c->rc_time);
+                    //LOGD("to %s:%d connection in the last contract has more than %d seconds have not received the bridge end of the data, that the connection is disconnected, the upcoming re-connect\n", c->host, c->port, c->st_time - c->rc_time);
                     LOGD(_("No packet received from %s:%d since last packet sent to it (%d seconds), assume connection broken, about to reconnect\n"), c->host, c->port, c->st_time - c->rc_time);
                     //reconnect_to_server(c);
                     c_broken = c;
                 }
                 c->st_time = time(NULL);
                 
-                /// 1.2 初始化最后一次收到服务器包的时间，以便进行超时判断
+                /// 1.2 initialize the last time the server receives packets time, for timeout judgment
                 if (c->rc_time == 0) {
                     c->rc_time = time(NULL);
                 }
                 
                 
-                /// 2. 发送数据
+                /// 2. Send data
                 sendb = packet_send(c->fd, buf, readb, *g_packet_id);
                 if (sendb < 0) {
-                    //LOGW("无法向 %s:%d(%d) 发送 %d 字节数据: %s\n", c->host, c->port, c->fd, readb, strerror(errno));
+                    //LOGW("无法向 %s:%d(%d) 发送 %of 字节数据: %s\n", c->host, c->port, c->fd, read, strerror(errno));
                     LOGW(_("Error while sending data to %s:%d(%d) with %d bytes: %s\n"), c->host, c->port, c->fd, readb, strerror(errno));
                     
                     if (errno == EINVAL || errno == ECONNREFUSED) {
@@ -511,17 +511,17 @@ void* client_thread(void* ptr) {
                     LOGW(_("%s:%d(%d) may close the connection\n"), c->host, c->port, c->fd);
                 }
                 else {
-                    //LOGD("向 %s:%d 发送了 %d 字节消息“%s”\n", c->host, c->port, sendb, buf);
+                    //LOGD("向 %s:%d 发送了 %of 字节消息“%s”\n", c->host, c->port, sendb, buf);
                     LOGD(_("Packet sent to %s:%d(%d) of %d bytes.\n"), c->host, c->port, c->fd, sendb);
                 }
             }
             
             
-            /// 检查是否有失效的连接
+            /// Check whether fail a connection
             if (c_broken != NULL) {
                 LOGI(_("Connection to %s:%d is broken, try reconnect\n"), c_broken->host, c_broken->port);
-              //LOGD("不会在该线程中进行重连操作, 才怪，不在这里重连的话似乎一直不会重连");
-              //LOGD("不会在该线程(%s)中进行重连操作，但会调用 ev_async_send(c->fd=%d) 以便通知另一线程调用 ev_feed_fd_event，以执行此操作\n", __FUNCTION__, c_broken->fd);
+              //LOGD("not in the thread to re-connect operation, No, is not here to re-connect the words seem to have been not re-connect");
+              //LOGD("not in this thread(%s)to re-connect to operate, but would call ev_async_send(c->fd=%d) to notify another thread to call ev_feed_fd_event to perform this operation\n", __FUNCTION__, c_broken->fd);
               LOGD(_("I will not perform reconnect in current thread(%s), I will call ev_async_send(c->fd=%d) to ask another thread to perform the reconnect\n"), __FUNCTION__, c_broken->fd);
               c_broken->broken = 1;
               ev_async_reset_conn.fd = c_broken->fd;

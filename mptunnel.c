@@ -21,13 +21,13 @@ int g_config_encrypt = 1;
 
 
 /**
- * 已经收到的包的红黑树根
- */
+* Have received a package of red-black tree root
+*/
 static struct rb_root g_received_rbtree = RB_ROOT;
 
 /**
- * 组装一个数据包，组装出来的包需要调用 packet_free 进行释放
- */
+* Assemble a data packet, assembled it out of the pack need to call packet_free release
+*/
 packet_t* packet_make(enum packet_type type, const char* buf, int buflen, int id) {
     packet_t* p;
 
@@ -66,7 +66,7 @@ int packet_send(int fd, char* buf, int buflen, int id) {
         LOGW("fd=%d may close the connection\n", fd);
     }
     else {
-        //LOGD("向 %d 发送了 %d 字节消息“%s”\n", fd, sendb, (char*)(p + 1));
+        //LOGD ("%d sending %d byte message '%s '\n", fd, sendb, (char*)(p + 1));
         LOGD(_("Sent %d bytes to %d, message id is %d\n"), sendb, fd, id);
     }
     
@@ -89,8 +89,8 @@ int packet_received(int _id) {
 */
 
 /**
- * 判断一个包是否曾经接收过，如果接收过返回 1,否则返回 0
- */
+* Determine whether a packet was received, if received before return 1,otherwise return 0
+*/
 /*
 int packet_is_received(int _id) {
     if (g_received_id == NULL) {
@@ -133,12 +133,12 @@ int received_destroy(received_t* r) {
 }
 
 /**
- * 收包管理器，从列表中删除一个 id
- */
+* Received the package Manager, and remove from the list an id
+*/
 int received_list_del(received_t* r, int id) {
     received_list_t* c;
     
-    /// 从“已收到包列表”中删除这个 id 
+    /// From the“Receive packet list”delete this id 
     pthread_mutex_lock(&r->rlist_mutex);
     
     c = received_rbtree_get(&g_received_rbtree, id);
@@ -157,8 +157,8 @@ int received_list_del(received_t* r, int id) {
 
 
 /**
- * 收包管理器，往列表中增加一个 id
- */
+* Received the package Manager, to the list add an id
+*/
 int received_list_add(received_t* r, int id) {
     pthread_mutex_lock(&r->rlist_mutex);
     
@@ -181,10 +181,10 @@ int received_list_add(received_t* r, int id) {
 
 
 /**
- * 收包管理器：判断一个数据包是否已经收过了
- * 
- * @param int       如果一个数据包已经收到过了就返回 1,如果没有收到过就返回 0
- */
+* Received the package Manager: determining a whether the data packet has been received.
+* 
+* @param int if a data packet has been received. returns 1,if not received returns 0
+*/
 int received_is_received(received_t* r, int id) {
     if (id <= r->min_con_id) {
         return 1;
@@ -195,7 +195,7 @@ int received_is_received(received_t* r, int id) {
     else {
         int ret = 0;
         
-        /// 在列表中查找这个 id
+        /// In the list to find the id
         pthread_mutex_lock(&r->rlist_mutex);
         
         struct received_list_t *n;
@@ -216,22 +216,22 @@ int received_is_received(received_t* r, int id) {
 
 
 /**
- * 收包管理器，记录收到了一个数据包
- * 
- * @param received_t*       收包管理器
- * @param int               刚刚收到的数据包的 id
- */
+* Received the package Manager, the record received is a data packet
+* 
+* @param received_t* received the package Manager
+* @param int the just received data packet the id of the
+*/
 int received_add(received_t* r, int id) {
-    /// 收到的数据包正好比“连续收到的最小数据包编号”大 1 的情况
+    /// The data packet received just more than“the continuous receipt of a minimum data packet number”large-1 case
     if (id == r->min_con_id + 1) {
         r->min_con_id = id;
         received_list_del(r, id);
     }
     else if (id <= r->min_con_id) {
-        /// 这个包已经收过了，无视
+        /// This packet has been received before, ignore
     }
     else {
-        /// 这个包跳过了几个包，将其添加到列表中
+        /// This package to skip a few packets, add it to the list
         received_list_add(r, id);
     }
     
@@ -243,11 +243,11 @@ int received_add(received_t* r, int id) {
 }
 
 /**
- * 收包管理器，丢弃超时的数据包，并更新“连续收到的最小数据包”
- * 
- * @param received_t*       丢包管理器
- * @param int               丢弃多少秒内未收到的包。
- */
+* Received the package Manager, the discard-timeout for the data packet, and updates the“continuous receipt of the minimum data package”
+* 
+* @param received_t* throw the package Manager
+* @param int discarded number of seconds is not received within the package.
+*/
 int received_try_dropdead(received_t* r, int ttl) {
     long ts = time(NULL);
     if (r->last_dropdead_time + ttl <= ts) {
@@ -264,18 +264,18 @@ int received_try_dropdead(received_t* r, int ttl) {
     do {
         received_list_t *minn = NULL;
         struct rb_node* rbnode = rbnode;
-        /// 找列表中最小的 id，判断其 ctime 是否距离现在已经超过了 ttl 秒，如果是，则丢弃该 id 之前的所有数据包
-        /// 如果其 ctime 距离现在没有超过 ttl 秒，则退出清理过程
+        /// Find the list of the smallest id, to determine its ctime whether the distance now has more than ttl seconds, if it is, then discard the id before all the data packets
+        /// If its ctime is now no more than ttl seconds, then exit the Clean-up process
         
         rbnode = rb_first(&g_received_rbtree);
         minn = container_of(rbnode, received_list_t, rbnode);
         
         if (minn != NULL) {
             if (minn->ctime + ttl <= time(NULL)) {
-                /// 丢弃该 id 之前的所有数据包
-                /// 由于这个数据包是列表中最小的数据包，所以不需要清理列表，只需要将 minn 从列表中删除即可
+                /// Discard the id before all the data packets
+                /// Since this packet is a list of the minimum data package, so no need to clean up the list, just to minn from the list can be deleted
                 
-                //LOGD("数据包“%d”收到的时间已经过去了 %ld 秒，认为之前所有的数据包都已经收到了，当前最小已收到连续包 id 是 %d\n", minn->id, time(NULL) - minn->ctime, r->min_con_id);
+                //LOGD("data package“%d”received time has passed for %ld seconds, think before all data packets have been received, the current minimum has received a continuous packet id is %d\n", minn->id, time(NULL) - minn->ctime, r->min_con_id);
                 LOGD(_("Packet #%d was received and time elapsed %ld seconds, assume packets which ID is smaller than it are all received. The smallest ID of received packet is %d\n"), minn->id, time(NULL) - minn->ctime, r->min_con_id);
                 
                 rb_erase(&minn->rbnode, &g_received_rbtree);
@@ -283,7 +283,7 @@ int received_try_dropdead(received_t* r, int ttl) {
                 free(minn);
             }
             else {
-                /// 退出循环
+                /// Exit the loop
                 minn = NULL;
                 break;
             }
@@ -360,12 +360,12 @@ received_list_t* received_rbtree_get(struct rb_root* root, int id) {
 
 
 /**
- * 加密和解密内容
- * 
- * @param char*     要加密的内容
- * @param int       要加密内容的长度
- * @param uint32_t  初始化向量
- */
+* Encrypt and decrypt the content
+* 
+* @param char* content to be encrypted
+* @param int to the encrypted Content Length
+* @param a uint32_t that the initialization vector
+*/
 void encrypt_lfsr(char* _buf, int _size, uint32_t *iv) {
     int i;
     unsigned char *buf = (unsigned char*)_buf;
@@ -383,8 +383,8 @@ void decrypt_lfsr(char* _buf, int _size, uint32_t* iv) {
 }
 
 /**
- * 对一个完整的 mptunnel 数据包进行加密和解密
- */
+* For a complete mptunnel packet encryption and decryption
+*/
 void mpdecrypt(char* _buf) {
     packet_t *p = (packet_t*)_buf;
     uint32_t iv;
@@ -393,14 +393,14 @@ void mpdecrypt(char* _buf) {
         return;
     }
     
-    /// FIXME: 由于数据通过 UDP 协议传输，故此处的 p->buflen 不可信，应该同时传入 buflen 并做校验，以防止内存错误
+    /// FIXME: since the data by the UDP Protocol to transmit, so the p->buflen not credible, it should be at the same time the incoming buflen and do check, to prevent memory errors
     
-    /// 首先解密 packet_t
+    /// First decrypt the packet_t
     iv = p->iv;
     
     decrypt_lfsr(_buf + sizeof(p->iv), sizeof(packet_t) - sizeof(p->iv), &iv);
     
-    /// 接着解密内容
+    /// Then decrypt the content
     decrypt_lfsr(_buf + sizeof(packet_t), p->buflen, &iv);
 }
 
@@ -422,22 +422,22 @@ void mpencrypt(char* _buf, int _buflen) {
 
 
 /**
- * 一个简单的线性反馈移位寄存器随机数发生器
- * 
- * @param uint32_t      随机数种子（状态），该状态的值会被改变
- * @return uint32_t     一个 32 位无符号整型的随机数
- */
+* A simple linear feedback shift register random number generator
+* 
+* @param a uint32_t that the random number seed status, the status value will be changed
+* @return a uint32_t that a 32-bit unsigned integer random number
+*/
 uint32_t lfsr_rand(uint32_t *st) {
     unsigned char b32, b30, b26, b25, b;
     uint32_t r = 0x00;
     int i;
     
     ///
-    /** 在我们的应用中不需要高强度的随机数
-    if (*st == 0) {
-        *st = 1;
-    }
-    */
+    /** In our application does not require high-strength random number
+if (*st == 0) {
+*st = 1;
+}
+*/
     
     for (i = 0; i < 32; i++) {
         b32 = *st & 0x00000001;
