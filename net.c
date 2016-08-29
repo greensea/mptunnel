@@ -15,13 +15,13 @@
 #include "net.h"
 
 /**
- * 在指定地址上开始一个监听 
- * 
- * @param const char*   监听地址，暂时只支持 IPv4,使用点分数字格式表示
- * @param int           监听端口
- * @param type          连接类型，可选 SOCK_STREAM 和 SOCK_DGRAM
- * @return int          成功时返回监听 fd,失败时返回其他值，并设置 errno
- */
+* At the specified address on the start a listener 
+* 
+* @param const char* listen address, temporarily only supports IPv4,using the point score Word format
+* @param int listening port
+* @param type The type of connection, the optional SOCK_STREAM and SOCK_DGRAM
+* @return int successfully returned when the listening fd,fails to return other value, and set errno
+*/
 int net_bind(const char* bind_ip, int port, int type) {
     int ret, n, c[4];
     int fd;
@@ -99,13 +99,13 @@ int net_accept(int bind_fd, void* client_ip) {
 
 
 /**
- * 连接到一个服务器
- * 
- * @param const char*   服务器地址
- * @param int           服务器端口
- * @param int           连接类型，可以是 SOCK_STREAM 或 SOCK_DGRAM
- * @return int          连接成功返回 fd，失败返回负数，并设置 errno
- */
+* Connect to a server
+* 
+* @param const char* server address
+* @param int server port
+* @param int the type of connection, which can be SOCK_STREAM or SOCK_DGRAM
+* @return int the connection is successful return fd, failure to return a negative number and set errno
+*/
 int net_connect(const char* host, int port, int type) { 
     int ret, fd;
     struct sockaddr_in server_addr;

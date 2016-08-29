@@ -20,10 +20,10 @@
 
 #define _(STR) gettext(STR)
 
-/// 转发时最大的包长度
+/// Forwarded when the maximum packet length
 #define MAX_PACKET_SIZE 8000
 
-/// 客户端检测的到桥端的连接超时时间
+/// Client detection to the bridge end of the connection timeout time
 #define CLIENT_BRIDGE_TIMEOUT   60
 
 
@@ -63,10 +63,10 @@ enum packet_type {
 };
 
 typedef struct packet_t {
-    uint32_t iv;    /** 加密使用的 IV */
+    uint32_t iv;    /** Encryption IV */
     enum packet_type type;
     int id;
-    int buflen;     /** 数据长度（不包括 packet_t 自身） */
+    int buflen;     /** Data length does not include packet_t itself */
 } packet_t;
 
 
@@ -78,8 +78,8 @@ typedef struct received_list_t {
     
 
 typedef struct received_t {
-    int min_con_id;     /// 连续收到的最小包编号
-    int max_id;         /// 目前已经收到的最大包编号
+    int min_con_id;     /// Continuously received the smallest number
+    int max_id;         /// Currently have received maximum packet number
     time_t last_dropdead_time;
     struct list_head rlist;
     pthread_mutex_t rlist_mutex;
@@ -92,9 +92,9 @@ typedef struct connections_t {
     char* host;
     int port;
     ev_io *watcher;
-    int rc_time;    /// 最后一次收到服务器端数据的时间
-    int st_time;    /// 最后一次向服务器发送数据包的时间
-    unsigned char broken;   /// 连接是否已经中断并需要重连，该记号由人工进行标记
+    int rc_time;    /// The last received server-side data time
+    int st_time;    /// The last time the server sent data packet of the time
+    unsigned char broken;   /// Whether the connection has been interrupted and need to re-connect, the sign by artificial marking
 } connections_t;
 
 

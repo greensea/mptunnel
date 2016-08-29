@@ -20,8 +20,8 @@ typedef struct bridge_t {
     struct list_head list;
     struct sockaddr addr;
     socklen_t addrlen;
-    int rc_time;    /// 最后一次收到客户端数据包的时间
-    int st_time;    /// 最后一次向客户端发送端数据包的时间
+    int rc_time;    /// The last time the client receives data packets the time
+    int st_time;    /// The last time the client sends the end data packet of the time
 } bridge_t;
 
 #endif

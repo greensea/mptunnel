@@ -24,8 +24,8 @@
 #define UDP_KEEP_ALIVE 300
 
 /**
- * 一个 UDP 连接上，最后收到包的时间与最后发送包的时间的最大时间差
- */
+* A UDP connection, the last received packet time and the last transmitted packet time The maximum time difference
+*/
 #define UDP_INTERACTIVE_TIMEOUT 60
 
 
@@ -48,8 +48,8 @@ extern int g_config_encrypt;
 
 
 /**
- * 收到远程桥发来的数据时的处理函数
- */
+* Receive remote Bridge is sent to the data processing function
+*/
 void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     char* buf;
     int buflen = 65536;
@@ -71,7 +71,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     b->addrlen = sizeof(b->addr);
     baddr = *(struct sockaddr_in*)&b->addr;
     
-    //LOGD("收到从桥端（fd=%d）发来的数据\n", w->fd);
+    //LOGD("received from the bridge end fd=%d sent data\n", w->fd);
     
     readb = recvfrom(w->fd, buf, buflen, 0, &b->addr, &b->addrlen);
     if (readb < 0) {
@@ -107,7 +107,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         b->rc_time = time(NULL);
         
         if (exists != 1) {
-            /// 这是一个新客户端，将其添加到客户端列表中
+            /// This is a new client, add it to the client list
             LOGI(_("Got a new client, add it to Client List\n"));
             list_add(&b->list, &g_bridge_list);
         }
@@ -116,33 +116,33 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     }
     
     
-    /// 解包，然后发送给目标服务器
+    /// Unpack, and then sent to the target server
     packet_t* p;
     
     mpdecrypt(buf);
     p = (packet_t*)buf;
     
     if (p->type == PKT_TYPE_CTL) {
-        //LOGD("从桥端(:%u)收取了 %d 字节数据编号为 %d 的数据包，但这是一个控制包，丢弃之\n", htons(baddr.sin_port), readb, p->id);
+        //LOGD("from the bridge end(:%u)received %d bytes of data number of %d data packets, but this is a control packet, discarding it\n", htons(baddr. sin_port), readb, p->id);
         LOGD(_("Received control packet from bridge (:%u) of %d bytes, packet ID is %d, drop it\n"), htons(baddr.sin_port), readb, p->id);
         free(buf);
         return;
     }
     else if (p->type != PKT_TYPE_DATA) {
-        //LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，但这是一个未知类型的数据包，丢弃之\n", htons(baddr.sin_port), readb, p->id);
+        //LOGD("from the bridge end(:%u)received %d byte number %d of data packet, but this is an unknown type of packet, discard it\n", htons(baddr. sin_port), readb, p->id);
         LOGD(_("Received packet from bridge (:%u) of %d bytes, packet ID is %d, but packet type is unknown, drop it.\n"), htons(baddr.sin_port), readb, p->id);
         free(buf);
         return;
     }
     else {
-        //LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包\n", htons(baddr.sin_port), readb, p->id);
+        //LOGD("from the bridge end(:%u)received %d byte number is %d packet\n", htons(baddr. sin_port), readb, p->id);
     }
     
     buflen = p->buflen;
     buf = (char*)buf + sizeof(*p);
     
     if (received_is_received(received, p->id) == 1) {
-        //LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的曾经收取过的数据包，丢弃之\n", htons(baddr.sin_port), readb, p->id);
+        //LOGD("from the bridge end(:%u)received %d byte number %d had charge of the data packet, discarding it\n", htons(baddr. sin_port), readb, p->id);
         LOGD(_("Received packet from bridge (:%u) of %d bytes which was received, packet ID is %d, drop it\n"), htons(baddr.sin_port), readb, p->id);
         free(p);
         
@@ -153,7 +153,7 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
         return;
     }
     else {
-        //LOGD("从桥端(:%u)收取了 %d 字节编号为 %d 的数据包，转发该包\n", htons(baddr.sin_port), readb, p->id);
+        //LOGD("from the bridge end(:%u)received %d byte number %d of data packet, forwarding the packet\n", htons(baddr. sin_port), readb, p->id);
         LOGD(_("Received packet from bridge (:%u) of %d bytes, ID is %d, forward it\n"), htons(baddr.sin_port), readb, p->id);
         received_add(received, p->id);
     }
@@ -164,19 +164,19 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
     }
     
     
-    /// 发送给目标服务器
+    /// Sent to the target server
     int sendb;
     sendb = send(g_target_fd, buf, buflen, MSG_DONTWAIT);
     if (sendb < 0) {
-        ///LOGW("无法向目标服务器发送编号为 %d 的数据包：%s\n", p->id, strerror(errno));
+        ///LOGW("unable to the target server to send the number is %d packet:%s\n", p->id, strerror(errno));
         LOGW(_("Can't send packet #%d to target server: %s\n"), p->id, strerror(errno));
     }
     else if (sendb == 0) {
-        //LOGW("目标服务器可能已经断开了连接，无法转发 %d 号数据包\n", p->id);
+        //LOGW("target server may have been disconnected, unable to forward %d number of data packet\n", p->id);
         LOGW(_("Connection to target server seems closed, can't forward packet #%d\n"), p->id);
     }
     else {
-        //LOGD("成功向目标服务器发送了 %d 字节数据：%s\n", buflen, buf);
+        //LOGD("successfully to the target server to send %d bytes data:%s\n", buflen, buf);
     }
     
     free(p);
@@ -185,8 +185,8 @@ void recv_bridge_callback(struct ev_loop* reactor, ev_io* w, int events) {
 
 
 /**
- * ev 处理线程
- */
+* ev processing thread
+*/
 void* ev_thread(void* ptr) {
     int port = 3002;
     
@@ -211,8 +211,8 @@ void* ev_thread(void* ptr) {
 
 
 /**
- * 向桥们发送数据
- */
+* To bridge who sent the data
+*/
 int send_to_servers(char* buf, int buflen) {
     struct sockaddr* addr;
     struct sockaddr_in *baddr;
@@ -225,7 +225,7 @@ int send_to_servers(char* buf, int buflen) {
         int ret = 0;
         int split = buflen / 2;
         
-        //LOGI("要发送的数据大小为 %d 字节，超过最大包大小(%d 字节)，将该包拆分为两个小包后再尝试发送\n", buflen, MAX_PACKET_SIZE);
+        //LOGI("sent data size is %d bytes, exceeds the maximum packet size(%d bytes), the packet is split into two packets and then try to send\n", buflen, MAX_PACKET_SIZE);
         LOGI(_("Packet is %d bytes, which excees max packet size limit (%d bytes), spilt the packet into two smaller packets before send.\n"), buflen, MAX_PACKET_SIZE);
         
         ret += send_to_servers(buf, split);
@@ -253,9 +253,9 @@ int send_to_servers(char* buf, int buflen) {
         b = list_entry(l, bridge_t, list);
         baddr = (struct sockaddr_in*)&b->addr;
         
-        /// 1. 检查连接是否超时
+        /// 1. Check whether the connection is timeout
         if (ts - b->rc_time > UDP_KEEP_ALIVE) {
-            //LOGD("桥（%s:%u）空闲了 %d 秒，认为此桥已经断开，不向其转发数据包 %d\n", ipstr, ntohs(baddr->sin_port), ts - b->rc_time, p->id);
+            //LOGD("Bridge%s:%u idle %d seconds, that this bridge has been disconnected, not to forward the data packet of %d\n", ipstr, ntohs(baddr->sin_port), ts - b->rc_time, p->id);
             LOGD(_("No packet received from bridge (%s:%u) for %d seconds, assume the connection is closed, stop forward packet to it %d\n"), ipstr, ntohs(baddr->sin_port), ts - b->rc_time, p->id);
             list_del(l);
             free(l);
@@ -263,7 +263,7 @@ int send_to_servers(char* buf, int buflen) {
         }
         
         if (abs(b->rc_time - b->st_time) > UDP_INTERACTIVE_TIMEOUT) {
-            //LOGD("桥（%s:%u）最后发包与收包时间之差超过了 %d 秒（实际：%d），认为此桥已经断开，不向其转发数据包 %d\n", ipstr, ntohs(baddr->sin_port), UDP_INTERACTIVE_TIMEOUT, b->rc_time - b->st_time, p->id);
+            //LOGD("Bridge%s:%u last contract and the packet receiving time difference of more than %d seconds, actual:%d, that this bridge has been disconnected, not to forward the data packet of %d\n", ipstr, ntohs(baddr->sin_port), UDP_INTERACTIVE_TIMEOUT, b->rc_time - b->st_time, p->id);
             LOGD(_("The time difference between packet received and packet sent of bridge %s:%u is larger than %d seconds (Actually %d seconds), assume the connection is broken, stop forward packet to it %d\n"), ipstr, ntohs(baddr->sin_port), UDP_INTERACTIVE_TIMEOUT, b->rc_time - b->st_time, p->id);
             list_del(l);
             free(l);
@@ -273,7 +273,7 @@ int send_to_servers(char* buf, int buflen) {
         b->st_time = time(NULL);
         
         
-        /// 2. 发送数据包
+        /// 2. Transmitting the data packet
         sendb = sendto(g_listen_fd, p, buflen + sizeof(*p), 0, &b->addr, b->addrlen);
         if (sendb < 0) {
             //LOGW("无法向桥(%s:%d)发送 %d 字节数据，包编号 %d: %s\n", ipstr, ntohs(baddr->sin_port), buflen, rawp.id, strerror(errno));
@@ -283,7 +283,7 @@ int send_to_servers(char* buf, int buflen) {
             LOGW("Can't send packet to bridge, bridge may close the connection\n");
         }
         else {
-            //LOGD("向桥（端口：%u）发送了 %d 字节数据，包编号 %d\n", ntohs(baddr->sin_port), sendb, rawp.id);
+            //LOGD("to bridge, port:%u, sent %d bytes of data, packet number %d\n", ntohs(baddr->sin_port), sendb, rawp. id);
             LOGD(_("Forward packet to bridge(port %u) of %d bytes, packet ID is %d\n"), ntohs(baddr->sin_port), sendb, rawp.id);
         }
     }
@@ -297,8 +297,8 @@ int send_to_servers(char* buf, int buflen) {
 
 
 /**
- * 用于转发服务器消息到客户端的线程
- */
+* For the forwarding server message to client thread
+*/
 void* server_thread(void* ptr) {
     int readb, sendb, buflen;
     char* buf;
@@ -334,7 +334,7 @@ void* server_thread(void* ptr) {
             continue;
         }
         else {
-            /// 收到了数据，将数据转发给桥
+            /// Received a data, the data is forwarded to the bridge
             send_to_servers(buf, readb);
         }
     }
@@ -362,7 +362,7 @@ int main(int argc, char** argv) {
         exit(-1);
     }
     else {
-        /// 载入配置信息
+        /// Load the configuration information
         g_listen_port = atoi(argv[1]);
         g_target_host = strdup(argv[2]);
         g_target_port = atoi(argv[3]);
@@ -401,7 +401,7 @@ int main(int argc, char** argv) {
     
 
 
-    /// 创建转发数据到目标服务器的线程
+    /// Create a forwards the data to the destination server thread
     int* ptr = malloc(sizeof(int));
     *ptr = clientfd;
     pthread_create(&tid, NULL, server_thread, NULL);
@@ -419,8 +419,8 @@ int main(int argc, char** argv) {
 
 
 /**
- * 初始化一个接收器 ev，用来处理收到的数据
- */
+* Initialize a receiver ev, is used to process the received data
+*/
 ev_io* init_recv_ev(int fd) {
     ev_io *watcher = (ev_io*)malloc(sizeof(ev_io));
     memset(watcher, 0x00, sizeof(*watcher));
