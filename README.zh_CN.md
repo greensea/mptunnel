@@ -81,3 +81,7 @@ socat udp-listen:4000 udp4:1.1.1.1:2000
 编译 mptunnel 时，需要先安装下面的库
 
 * libev
+
+## 参见
+
+[mlvpn](https://github.com/zehome/MLVPN/) 也是一个可以用来做多路 UDP 的项目。
